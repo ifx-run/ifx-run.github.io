@@ -2,6 +2,8 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -43,20 +45,16 @@ export function ExplorerWorkspace() {
   const [result, setResult] = useState<ExploredTransaction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<number | null>(null)
   const [resolving, setResolving] = useState(false)
 
   const applyResult = useCallback((explored: ExploredTransaction) => {
     setResult(explored)
-    const firstIfx = explored.instructions.findIndex((i) => i.isIfx)
-    setSelected(firstIfx >= 0 ? firstIfx : explored.instructions.length ? 0 : null)
   }, [])
 
   const clearResult = useCallback(() => {
     setResult(null)
     setError(null)
     setRpcError(null)
-    setSelected(null)
   }, [])
 
   const run = useCallback(
@@ -70,7 +68,6 @@ export function ExplorerWorkspace() {
       abortRef.current?.abort()
       setError(null)
       setRpcError(null)
-      setSelected(null)
 
       try {
         applyResult(exploreFromWire(value))
@@ -259,16 +256,7 @@ export function ExplorerWorkspace() {
           )}
 
           {result.altResolved && result.instructions.length > 0 && (
-            <>
-              <InstructionTimeline
-                instructions={result.instructions}
-                selected={selected}
-                onSelect={setSelected}
-              />
-              {selected !== null && result.instructions[selected] && (
-                <InstructionDetail ix={result.instructions[selected]!} />
-              )}
-            </>
+            <InstructionList instructions={result.instructions} />
           )}
 
           {showAltRpc && (
@@ -366,47 +354,179 @@ function PacketPanel({ result }: { result: ExploredTransaction }) {
   )
 }
 
-function InstructionTimeline({
+type BindingDef = { ixIndex: number; lineIndex: number }
+
+/** Resolve `$N` to its defining let line as of `fromIxIndex` (frame session aware). */
+function resolveBindingDef(
+  instructions: ExploredInstruction[],
+  fromIxIndex: number,
+  bindingIndex: number,
+): BindingDef | null {
+  const defs = new Map<number, BindingDef>()
+  for (const ix of instructions) {
+    if (ix.index > fromIxIndex) break
+    const kind = ix.l1?.args.kind
+    if (kind === 'create_frame' || kind === 'reset_frame') {
+      defs.clear()
+      continue
+    }
+    if (kind !== 'let' || !ix.l1) continue
+    for (let lineIndex = 0; lineIndex < ix.l1.lines.length; lineIndex++) {
+      const m = /^\$(\d+)\s*←/.exec(ix.l1.lines[lineIndex]!)
+      if (!m) continue
+      defs.set(Number(m[1]), { ixIndex: ix.index, lineIndex })
+    }
+  }
+  return defs.get(bindingIndex) ?? null
+}
+
+function defaultExpanded(instructions: ExploredInstruction[]): Set<number> {
+  const firstIfx = instructions.find((i) => i.isIfx)
+  if (firstIfx) return new Set([firstIfx.index])
+  if (instructions[0]) return new Set([instructions[0].index])
+  return new Set()
+}
+
+function InstructionList({
   instructions,
-  selected,
-  onSelect,
 }: {
   instructions: ExploredInstruction[]
-  selected: number | null
-  onSelect: (i: number) => void
 }) {
   const { t } = useApp()
+  const resultKey = useMemo(
+    () =>
+      instructions
+        .map((ix) => `${ix.index}:${ix.programId}:${ix.dataLen}`)
+        .join('|'),
+    [instructions],
+  )
+  const [expanded, setExpanded] = useState(() => defaultExpanded(instructions))
+  const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
+  const flashLineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    setExpanded(defaultExpanded(instructions))
+    setFlashLine(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultKey])
+
+  useLayoutEffect(() => {
+    if (!flashLine) return
+    if (!expanded.has(flashLine.ixIndex)) return
+    document
+      .getElementById(`ix-l1-${flashLine.ixIndex}-${flashLine.lineIndex}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [flashLine, expanded])
+
+  useEffect(() => {
+    return () => {
+      if (flashLineTimer.current) clearTimeout(flashLineTimer.current)
+    }
+  }, [])
+
+  const toggle = useCallback((index: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }, [])
+
+  const expandAll = useCallback(() => {
+    setExpanded(new Set(instructions.map((ix) => ix.index)))
+  }, [instructions])
+
+  const collapseAll = useCallback(() => {
+    setExpanded(new Set())
+  }, [])
+
+  const focusBinding = useCallback(
+    (fromIxIndex: number, bindingIndex: number) => {
+      const def = resolveBindingDef(instructions, fromIxIndex, bindingIndex)
+      if (!def) return
+      setExpanded((prev) => {
+        if (prev.has(def.ixIndex)) return prev
+        const next = new Set(prev)
+        next.add(def.ixIndex)
+        return next
+      })
+      setFlashLine(def)
+      if (flashLineTimer.current) clearTimeout(flashLineTimer.current)
+      flashLineTimer.current = setTimeout(() => setFlashLine(null), 1300)
+    },
+    [instructions],
+  )
+
   return (
     <section className="panel timeline-panel">
-      <div className="panel-head">
+      <div className="panel-head timeline-toolbar">
         <h2>{t.instructions}</h2>
+        <div className="timeline-toolbar-actions">
+          <button type="button" className="ghost tiny" onClick={expandAll}>
+            {t.expandAll}
+          </button>
+          <button type="button" className="ghost tiny" onClick={collapseAll}>
+            {t.collapseAll}
+          </button>
+        </div>
       </div>
       <ol className="timeline">
-        {instructions.map((ix) => (
-          <li key={ix.index}>
-            <button
-              type="button"
-              className={[
-                'timeline-item',
-                ix.isIfx ? 'is-ifx' : ix.programShort ? 'is-known' : 'is-other',
-                selected === ix.index ? 'is-selected' : '',
-              ].join(' ')}
-              onClick={() => onSelect(ix.index)}
+        {instructions.map((ix) => {
+          const open = expanded.has(ix.index)
+          return (
+            <li
+              key={ix.index}
+              id={`ix-row-${ix.index}`}
+              className={['timeline-row', open ? 'is-open' : ''].join(' ')}
             >
-              <span className="ix-idx">{ix.index}</span>
-              <span className="ix-name" title={ix.programId}>
-                {ix.programLabel ?? shortenAddress(ix.programId, 5, 4)}
-              </span>
-              <span className="ix-sum">{ix.summary}</span>
-            </button>
-          </li>
-        ))}
+              <button
+                type="button"
+                className={[
+                  'timeline-item',
+                  ix.isIfx ? 'is-ifx' : ix.programShort ? 'is-known' : 'is-other',
+                  open ? 'is-expanded' : '',
+                ].join(' ')}
+                aria-expanded={open}
+                onClick={() => toggle(ix.index)}
+              >
+                <span className="ix-chevron" aria-hidden>
+                  {open ? '▾' : '▸'}
+                </span>
+                <span className="ix-idx">{ix.index}</span>
+                <span className="ix-name" title={ix.programId}>
+                  {ix.programLabel ?? shortenAddress(ix.programId, 5, 4)}
+                </span>
+                <span className="ix-sum">{ix.summary}</span>
+              </button>
+              {open && (
+                <InstructionBody
+                  ix={ix}
+                  flashLine={
+                    flashLine?.ixIndex === ix.index ? flashLine.lineIndex : null
+                  }
+                  onValueClick={(bindingIndex) =>
+                    focusBinding(ix.index, bindingIndex)
+                  }
+                />
+              )}
+            </li>
+          )
+        })}
       </ol>
     </section>
   )
 }
 
-function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
+function InstructionBody({
+  ix,
+  flashLine,
+  onValueClick,
+}: {
+  ix: ExploredInstruction
+  flashLine: number | null
+  onValueClick: (bindingIndex: number) => void
+}) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
   const [flashAccts, setFlashAccts] = useState<number[]>([])
@@ -452,25 +572,8 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
     [focusRemainingRange],
   )
 
-  const namedTitle =
-    ix.programLabel && ix.ixLabel
-      ? `${ix.programLabel} · ${ix.ixLabel}`
-      : ix.programLabel
-        ? ix.programLabel
-        : (ix.ifxName ?? null)
-
   return (
-    <section className="panel detail-panel">
-      <h2 className="detail-title">
-        <span className="detail-title-idx">#{ix.index}</span>{' '}
-        {namedTitle ? (
-          <span className={ix.isIfx ? 'ifx-badge' : 'known-badge'}>
-            {namedTitle}
-          </span>
-        ) : (
-          <code className="break detail-title-addr">{ix.programId}</code>
-        )}
-      </h2>
+    <div className="ix-body">
       <dl className="ix-meta-dl">
         <div>
           <dt>{t.program}</dt>
@@ -557,11 +660,16 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
           )}
           <ul className="l1-lines">
             {ix.l1.lines.map((line, i) => (
-              <li key={i}>
-                <L1LineWithAcctLinks
+              <li
+                key={i}
+                id={`ix-l1-${ix.index}-${i}`}
+                className={flashLine === i ? 'is-flash' : undefined}
+              >
+                <L1LineWithLinks
                   line={line}
                   onAcctClick={focusRemainingAccount}
                   onRangeClick={focusRemainingRange}
+                  onValueClick={onValueClick}
                 />
               </li>
             ))}
@@ -605,34 +713,30 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       <pre className="data-blob">
         {ix.dataLen === 0 ? '—' : formatBytes(ix.data, dataEnc)}
       </pre>
-      {ix.isIfx && !ix.l1 && (
-        <p className="muted">{t.payloadBytes}</p>
-      )}
+      {ix.isIfx && !ix.l1 && <p className="muted">{t.payloadBytes}</p>}
       <div className="detail-links">
-        {ix.docsSlug && (
-          <Link to={`/docs/${ix.docsSlug}`}>{t.docs}</Link>
-        )}
+        {ix.docsSlug && <Link to={`/docs/${ix.docsSlug}`}>{t.docs}</Link>}
       </div>
-    </section>
+    </div>
   )
 }
 
 /**
- * Turn `#5` and `accts[0..+3]` in L1 lines into clickable remaining-account links.
- * Ranges use remaining indexes (after frame); single `#N` likewise.
+ * Turn `$3`, `#5`, and `accts[0..+3]` in L1 lines into clickable links.
  */
-function L1LineWithAcctLinks({
+function L1LineWithLinks({
   line,
   onAcctClick,
   onRangeClick,
+  onValueClick,
 }: {
   line: string
   onAcctClick: (index: number) => void
   onRangeClick: (start: number, len: number) => void
+  onValueClick: (bindingIndex: number) => void
 }) {
   const nodes: ReactNode[] = []
-  // Prefer accts[start..+len] before bare #N so nested digits aren't split.
-  const re = /accts\[(\d+)\.\.\+(\d+)\]|#(\d+)/g
+  const re = /accts\[(\d+)\.\.\+(\d+)\]|\$(\d+)|#(\d+)/g
   let last = 0
   let m: RegExpExecArray | null
   let key = 0
@@ -649,19 +753,41 @@ function L1LineWithAcctLinks({
           type="button"
           className="acct-ref acct-ref-range"
           title={`remaining [${start} .. ${start + len})`}
-          onClick={() => onRangeClick(start, len)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRangeClick(start, len)
+          }}
         >
           {m[0]}
         </button>,
       )
-    } else {
+    } else if (m[3] !== undefined) {
       const idx = Number(m[3])
       nodes.push(
         <button
           key={key++}
           type="button"
+          className="value-ref"
+          title={`$${idx}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onValueClick(idx)
+          }}
+        >
+          ${idx}
+        </button>,
+      )
+    } else {
+      const idx = Number(m[4])
+      nodes.push(
+        <button
+          key={key++}
+          type="button"
           className="acct-ref"
-          onClick={() => onAcctClick(idx)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onAcctClick(idx)
+          }}
         >
           #{idx}
         </button>,
