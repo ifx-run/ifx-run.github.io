@@ -589,18 +589,25 @@ textarea {
   grid-template-columns: 1fr;
 }
 
+.instructions-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
 @media (min-width: 900px) {
   .result-grid {
     grid-template-columns: 280px 1fr;
     grid-template-areas:
-      'packet timeline'
+      'packet main'
       'note note';
   }
   .packet-panel {
     grid-area: packet;
   }
-  .timeline-panel {
-    grid-area: timeline;
+  .instructions-column {
+    grid-area: main;
   }
   .decoder-note {
     grid-area: note;
@@ -650,24 +657,22 @@ textarea {
   gap: 0.4rem;
   flex-wrap: wrap;
 }
+.frame-panel .panel-head {
+  margin-bottom: 0.55rem;
+}
 .frame-strips {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  margin: 0 0 0.75rem;
-}
-.frame-strips-actions {
-  display: flex;
-  justify-content: flex-end;
 }
 .frame-strip {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.frame-strip + .frame-strip {
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
 }
 .frame-strip-label {
   font-size: 0.72rem;

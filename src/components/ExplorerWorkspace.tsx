@@ -573,39 +573,52 @@ function InstructionList({
   const aliasCount = Object.keys(aliases).length
 
   return (
-    <section className="panel timeline-panel">
-      <div className="panel-head timeline-toolbar">
-        <h2>{t.instructions}</h2>
-        <div className="timeline-toolbar-actions">
-          <button type="button" className="ghost tiny" onClick={expandAll}>
-            {t.expandAll}
-          </button>
-          <button type="button" className="ghost tiny" onClick={collapseAll}>
-            {t.collapseAll}
-          </button>
-        </div>
-      </div>
+    <div className="instructions-column">
       {frames.length > 0 && (
-        <FrameStrips
-          frames={frames}
-          aliases={aliases}
-          aliasCount={aliasCount}
-          onRename={openRename}
-          onClearName={clearBindingName}
-          onClearAllNames={clearAllBindingNames}
-          onJumpDef={(defIx) => {
-            setExpanded((prev) => {
-              const next = new Set(prev)
-              next.add(defIx)
-              return next
-            })
-            document
-              .getElementById(`ix-row-${defIx}`)
-              ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-          }}
-        />
+        <section className="panel frame-panel">
+          <div className="panel-head">
+            <h2>{t.frameStrip}</h2>
+            {aliasCount > 0 && (
+              <button
+                type="button"
+                className="ghost tiny"
+                onClick={clearAllBindingNames}
+              >
+                {t.frameClearAllNames}
+              </button>
+            )}
+          </div>
+          <FrameStrips
+            frames={frames}
+            aliases={aliases}
+            onRename={openRename}
+            onClearName={clearBindingName}
+            onJumpDef={(defIx) => {
+              setExpanded((prev) => {
+                const next = new Set(prev)
+                next.add(defIx)
+                return next
+              })
+              document
+                .getElementById(`ix-row-${defIx}`)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            }}
+          />
+        </section>
       )}
-      <ol className="timeline">
+      <section className="panel timeline-panel">
+        <div className="panel-head timeline-toolbar">
+          <h2>{t.instructions}</h2>
+          <div className="timeline-toolbar-actions">
+            <button type="button" className="ghost tiny" onClick={expandAll}>
+              {t.expandAll}
+            </button>
+            <button type="button" className="ghost tiny" onClick={collapseAll}>
+              {t.collapseAll}
+            </button>
+          </div>
+        </div>
+        <ol className="timeline">
         {instructions.map((ix) => {
           const open = expanded.has(ix.index)
           const frameAddr = ix.isIfx ? ix.accounts[0]?.address : undefined
@@ -656,7 +669,8 @@ function InstructionList({
             </li>
           )
         })}
-      </ol>
+        </ol>
+      </section>
       {refsModal && (
         <RefsModal
           bindingIndex={refsModal.bindingIndex}
@@ -690,7 +704,7 @@ function InstructionList({
           onClose={() => setRenameModal(null)}
         />
       )}
-    </section>
+    </div>
   )
 }
 
@@ -793,40 +807,27 @@ function RenameBindingModal({
 function FrameStrips({
   frames,
   aliases,
-  aliasCount,
   onRename,
   onClearName,
-  onClearAllNames,
   onJumpDef,
 }: {
   frames: FrameView[]
   aliases: Record<string, string>
-  aliasCount: number
   onRename: (frame: string, index: number) => void
   onClearName: (frame: string, index: number) => void
-  onClearAllNames: () => void
   onJumpDef: (defIx: number) => void
 }) {
   const { t } = useApp()
+  const multi = frames.length > 1
   return (
     <div className="frame-strips">
-      {aliasCount > 0 && (
-        <div className="frame-strips-actions">
-          <button
-            type="button"
-            className="ghost tiny"
-            onClick={onClearAllNames}
-          >
-            {t.frameClearAllNames}
-          </button>
-        </div>
-      )}
       {frames.map((frame) => (
         <div key={frame.address} className="frame-strip">
-          <div className="frame-strip-label" title={frame.address}>
-            {t.frameStrip}{' '}
-            <code>{shortenAddress(frame.address, 4, 4)}</code>
-          </div>
+          {multi && (
+            <div className="frame-strip-label" title={frame.address}>
+              <code>{shortenAddress(frame.address, 4, 4)}</code>
+            </div>
+          )}
           <div className="frame-strip-vars" role="list">
             {frame.vars.map((v) => {
               const key = aliasKey(frame.address, v.index)
