@@ -13,12 +13,18 @@ const GITHUB_DOCS =
 const SLUGS = new Set(DOC_ENTRIES.map((d) => d.slug))
 
 /**
+ * GFM ends a table on a blank line. Upstream docs sometimes insert a blank
+ * between rows (e.g. errors 6031/6032); stitch those back into one table.
+ */
+export function fixBrokenGfmTables(md: string): string {
+  return md.replace(/(\|[^\n]*\|)\r?\n[ \t]*\r?\n+(?=\|)/g, '$1\n')
+}
+
+/**
  * Rewrite relative markdown links:
  * - `./foo.md` → `/docs/foo?lang=en`
  * - `./foo.zh-CN.md` → `/docs/foo?lang=zh`
- *   (so in-doc English|中文 switchers and cross-links keep language)
  * - otherwise → GitHub blob URL
- * - keep http(s) and hash-only links
  */
 export function rewriteDocLinks(md: string): string {
   return md.replace(
@@ -60,7 +66,7 @@ export function rewriteDocLinks(md: string): string {
 }
 
 export async function renderMarkdown(md: string): Promise<string> {
-  const rewritten = rewriteDocLinks(md)
+  const rewritten = rewriteDocLinks(fixBrokenGfmTables(md))
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)

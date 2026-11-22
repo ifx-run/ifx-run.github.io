@@ -1,11 +1,28 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { DEFAULT_IFX_PROGRAM_ID } from '../lib/ifx/program-ids'
 
 export function Layout() {
-  const { t, toggleLang, lang } = useApp()
+  const { t, lang, setLang } = useApp()
   const { pathname } = useLocation()
+  const [, setSearchParams] = useSearchParams()
   const isHome = pathname === '/'
+
+  function onToggleLang() {
+    const next = lang === 'en' ? 'zh' : 'en'
+    setLang(next)
+    // On docs routes, update ?lang= in the same gesture (no reverse sync effect).
+    if (pathname.startsWith('/docs')) {
+      setSearchParams(
+        (prev) => {
+          const nextParams = new URLSearchParams(prev)
+          nextParams.set('lang', next)
+          return nextParams
+        },
+        { replace: true },
+      )
+    }
+  }
 
   return (
     <div className={isHome ? 'shell shell-home' : 'shell'}>
@@ -25,7 +42,7 @@ export function Layout() {
           >
             {t.github}
           </a>
-          <button type="button" className="ghost" onClick={toggleLang}>
+          <button type="button" className="ghost" onClick={onToggleLang}>
             {t.langToggle}
           </button>
         </nav>

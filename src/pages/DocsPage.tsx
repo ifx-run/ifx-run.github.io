@@ -17,49 +17,52 @@ import {
 import { renderMarkdown } from '../lib/docs/render'
 import type { Lang } from '../lib/i18n'
 
-function parseLangParam(raw: string | null): Lang | null {
+export function parseLangParam(raw: string | null): Lang | null {
   if (raw === 'zh' || raw === 'en') return raw
   return null
 }
 
-/** Apply ?lang= from the URL into app state (URL wins on navigation). */
+/**
+ * One-way: URL ?lang= → app language.
+ * Do not write URL here — that fought in-doc navigations and caused flicker.
+ */
 function useLangFromSearchParams() {
   const { lang, setLang } = useApp()
   const [params] = useSearchParams()
+  const urlLang = params.get('lang')
 
   useEffect(() => {
-    const fromUrl = parseLangParam(params.get('lang'))
+    const fromUrl = parseLangParam(urlLang)
     if (fromUrl && fromUrl !== lang) setLang(fromUrl)
-    // Only react to URL changes — do not depend on `lang` or toggle fights the URL.
+    // Depend on the primitive string, not `lang`, so we only react to URL edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [params, setLang])
+  }, [urlLang, setLang])
 }
 
-/** Keep ?lang= aligned when the user toggles language in the chrome. */
-function useSearchParamsFromLang() {
+/** If the URL has no ?lang=, seed it once from current app language. */
+function useSeedLangQuery() {
   const { lang } = useApp()
   const [params, setSearchParams] = useSearchParams()
 
   useEffect(() => {
-    if (params.get('lang') === lang) return
+    if (params.get('lang')) return
     setSearchParams(
       (prev) => {
+        if (prev.get('lang')) return prev
         const next = new URLSearchParams(prev)
-        if (next.get('lang') === lang) return prev
         next.set('lang', lang)
         return next
       },
       { replace: true },
     )
-    // Only react to lang changes from the UI toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [lang, setSearchParams])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once per mount/path
+  }, [setSearchParams])
 }
 
 export function DocsIndexPage() {
   const { t, lang } = useApp()
   useLangFromSearchParams()
-  useSearchParamsFromLang()
+  useSeedLangQuery()
 
   return (
     <div className="docs-layout">
@@ -90,14 +93,14 @@ export function DocsIndexPage() {
 
 export function DocsArticlePage() {
   const { slug } = useParams()
-  const { t, lang } = useApp()
+  const { t, lang, setLang } = useApp()
   const navigate = useNavigate()
   const entry = slug ? getDoc(slug) : undefined
   const [html, setHtml] = useState<string>('')
   const [err, setErr] = useState<string | null>(null)
 
   useLangFromSearchParams()
-  useSearchParamsFromLang()
+  useSeedLangQuery()
 
   useEffect(() => {
     if (!entry) return
@@ -123,7 +126,14 @@ export function DocsArticlePage() {
     if (href.startsWith('#')) return
     if (href.startsWith('/')) {
       e.preventDefault()
-      navigate(href)
+      try {
+        const url = new URL(href, window.location.origin)
+        const nextLang = parseLangParam(url.searchParams.get('lang'))
+        if (nextLang) setLang(nextLang)
+        navigate(`${url.pathname}${url.search}${url.hash}`)
+      } catch {
+        navigate(href)
+      }
     }
   }
 
