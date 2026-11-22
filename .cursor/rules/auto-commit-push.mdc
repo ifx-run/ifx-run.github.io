@@ -1,0 +1,15 @@
+---
+description: Auto commit and push when changes compile and are demoable
+alwaysApply: true
+---
+
+# Auto commit & push
+
+When the user asks for code changes:
+
+1. Implement the change.
+2. If it **compiles** (`npm run build` or the relevant check passes) **and** the feature/UI is relatively complete and observable (not a half-finished stub), **commit and push to `origin`** without waiting to be asked.
+3. Keep commits focused; follow the repo’s git commit rules (HEREDOC message, no secrets, no force push, no amend unless criteria met).
+4. After push, briefly report the commit SHA / URL so the user can check Pages or the repo.
+
+Do **not** auto-push for: exploratory spikes that do not compile, incomplete WIP the user marked as draft, or when the user explicitly says not to commit/push.
