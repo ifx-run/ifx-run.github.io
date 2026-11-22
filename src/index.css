@@ -501,26 +501,24 @@ textarea {
   flex: 0 0 auto;
   color: var(--text);
 }
+/* Dot trail fills the flex gap exactly — no text node, no layout blowout. */
 .ingress-preview-mid {
-  position: relative;
   flex: 1 1 0%;
-  min-width: 2.5rem;
-  align-self: stretch;
-  overflow: hidden;
+  min-width: 1.75rem;
+  height: 0.35em;
+  align-self: center;
+  background-image: radial-gradient(
+    circle closest-side,
+    currentColor 92%,
+    transparent 93%
+  );
+  background-size: 0.38em 0.35em;
+  background-repeat: repeat-x;
+  background-position: left center;
   color: var(--muted);
-  opacity: 0.75;
-  user-select: none;
-}
-/* Out of flow so a long fill never expands the page width. */
-.ingress-preview-mid::before {
-  content: '…………………………………………………………………………………………………………………………………………………………………………';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
-  letter-spacing: 0.02em;
+  opacity: 0.7;
   pointer-events: none;
+  user-select: none;
 }
 
 .field-label {
