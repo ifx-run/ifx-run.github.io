@@ -7,15 +7,16 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
 import { DOC_ENTRIES } from './catalog'
 
-const GITHUB_DOCS =
-  'https://github.com/ifx-run/ifx/blob/main/docs/'
+const GITHUB_BLOB = 'https://github.com/ifx-run/ifx/blob/main/'
+const GITHUB_DOCS = `${GITHUB_BLOB}docs/`
 
 const SLUGS = new Set(DOC_ENTRIES.map((d) => d.slug))
 
 /**
  * Rewrite relative markdown links:
- * - `./foo.md` → `/docs/foo?lang=en`
+ * - `./foo.md` / `docs/foo.md` → `/docs/foo?lang=en`
  * - `./foo.zh-CN.md` → `/docs/foo?lang=zh`
+ * - `README.md` → `/docs/readme`
  * - otherwise → GitHub blob URL
  */
 export function rewriteDocLinks(md: string): string {
@@ -37,22 +38,31 @@ export function rewriteDocLinks(md: string): string {
       const hash = hashIdx >= 0 ? trimmed.slice(hashIdx + 1) : ''
       const file = pathPart.replace(/^\.\//, '').replace(/^\//, '')
       if (!file.endsWith('.md')) {
-        return `[${label}](${GITHUB_DOCS}${file}${hash ? `#${hash}` : ''})`
+        const blob = file.startsWith('docs/')
+          ? `${GITHUB_BLOB}${file}`
+          : `${GITHUB_DOCS}${file}`
+        return `[${label}](${blob}${hash ? `#${hash}` : ''})`
       }
 
       const isZh = /\.zh-CN\.md$/i.test(file)
-      const base = file
+      let base = file
         .replace(/\.zh-CN\.md$/i, '')
         .replace(/\.md$/i, '')
         .split('/')
         .pop()!
+      if (/^readme$/i.test(base)) base = 'readme'
 
       if (SLUGS.has(base)) {
         const lang = isZh ? 'zh' : 'en'
         const q = `?lang=${lang}`
         return `[${label}](/docs/${base}${q}${hash ? `#${hash}` : ''})`
       }
-      return `[${label}](${GITHUB_DOCS}${file}${hash ? `#${hash}` : ''})`
+      const blob = file.startsWith('docs/')
+        ? `${GITHUB_BLOB}${file}`
+        : /^readme\.md$/i.test(file)
+          ? `${GITHUB_BLOB}README.md`
+          : `${GITHUB_DOCS}${file}`
+      return `[${label}](${blob}${hash ? `#${hash}` : ''})`
     },
   )
 }

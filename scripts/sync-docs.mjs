@@ -3,11 +3,15 @@
  * Sync allowlisted docs from ifx-run/ifx at the pinned tag/SHA.
  * Source of truth stays in the main repo — this site only renders a snapshot.
  *
+ * Allowlist entries are either:
+ * - `README.md` (repo root) → written as `readme.md`
+ * - `foo.md` → `docs/foo.md` in the source repo
+ *
  * Strategy: shallow sparse git clone (more reliable than raw.githubusercontent.com),
  * with HTTP fetch as fallback.
  */
 import { mkdir, readFile, writeFile, rm, cp } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mkdtemp, access } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -25,6 +29,20 @@ const allowlist = pin.allowlist
 if (!ref || !Array.isArray(allowlist) || allowlist.length === 0) {
   console.error('docs-pin.json must set ref and allowlist')
   process.exit(1)
+}
+
+/** Map allowlist entry → path inside the ifx repo. */
+function sourcePath(entry) {
+  if (/^readme\.md$/i.test(entry)) return 'README.md'
+  if (entry.includes('/')) return entry
+  return `docs/${entry}`
+}
+
+/** Flatten into content/docs; normalize README casing for the site slug. */
+function destFileName(entry) {
+  const base = basename(entry)
+  if (/^readme\.md$/i.test(base)) return 'readme.md'
+  return base
 }
 
 await rm(outDir, { recursive: true, force: true })
@@ -64,17 +82,28 @@ async function syncViaGit(repo, sha, files, dest) {
       `https://github.com/${repo}.git`,
       tmp,
     ])
+    // Cone mode only accepts directories; root README is fetched over HTTP below.
     await run('git', ['-C', tmp, 'sparse-checkout', 'set', 'docs'])
     // Fetch exact SHA if not on default tip
-    await run('git', ['-C', tmp, 'fetch', '--depth', '1', 'origin', sha]).catch(() => {})
+    await run('git', ['-C', tmp, 'fetch', '--depth', '1', 'origin', sha]).catch(
+      () => {},
+    )
     await run('git', ['-C', tmp, 'checkout', sha])
     const copied = []
     for (const name of files) {
-      const src = join(tmp, 'docs', name)
-      await access(src)
-      await cp(src, join(dest, name))
-      copied.push(name)
-      console.log(`  + ${name}`)
+      const repoPath = sourcePath(name)
+      const outName = destFileName(name)
+      if (repoPath.startsWith('docs/')) {
+        const src = join(tmp, repoPath)
+        await access(src)
+        await cp(src, join(dest, outName))
+      } else {
+        const url = `https://raw.githubusercontent.com/${repo}/${sha}/${repoPath}`
+        const text = await fetchTextWithRetry(url, repoPath)
+        await writeFile(join(dest, outName), text, 'utf8')
+      }
+      copied.push(outName)
+      console.log(`  + ${outName} ← ${repoPath}`)
     }
     return copied
   } finally {
@@ -85,11 +114,13 @@ async function syncViaGit(repo, sha, files, dest) {
 async function syncViaHttp(repo, sha, files, dest) {
   const copied = []
   for (const name of files) {
-    const url = `https://raw.githubusercontent.com/${repo}/${sha}/docs/${name}`
-    const text = await fetchTextWithRetry(url, name)
-    await writeFile(join(dest, name), text, 'utf8')
-    copied.push(name)
-    console.log(`  + ${name}`)
+    const repoPath = sourcePath(name)
+    const url = `https://raw.githubusercontent.com/${repo}/${sha}/${repoPath}`
+    const text = await fetchTextWithRetry(url, repoPath)
+    const outName = destFileName(name)
+    await writeFile(join(dest, outName), text, 'utf8')
+    copied.push(outName)
+    console.log(`  + ${outName} ← ${repoPath}`)
   }
   return copied
 }

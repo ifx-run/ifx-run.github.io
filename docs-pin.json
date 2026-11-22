@@ -3,6 +3,7 @@
   "ref": "ebbb5eb979369be8b53ad8dc02915d8e94b08a34",
   "note": "Pin a tag (e.g. v0.1.3) or commit SHA. CI / prebuild syncs only the allowlist below.",
   "allowlist": [
+    "README.md",
     "design.md",
     "design.zh-CN.md",
     "glossary.md",

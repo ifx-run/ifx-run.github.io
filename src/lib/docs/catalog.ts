@@ -25,6 +25,7 @@ const rawModules = import.meta.glob('../../../content/docs/*.md', {
 }) as Record<string, string>
 
 const TITLE_OVERRIDES: Record<string, { en: string; zh: string }> = {
+  readme: { en: 'README', zh: 'README' },
   design: { en: 'Design', zh: '设计' },
   glossary: { en: 'Glossary', zh: '术语表' },
   implementation: { en: 'Implementation', zh: '实现' },
