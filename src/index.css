@@ -487,12 +487,17 @@ textarea {
   border: 1px solid var(--line);
   color: var(--muted);
   border-radius: var(--radius);
-  padding: 0.35rem 0.65rem;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
   cursor: pointer;
 }
-.ghost:hover {
+.ghost:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--muted);
+}
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .kbd-hint {

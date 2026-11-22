@@ -33,6 +33,7 @@ export const copy = {
     inputLabel: 'Transaction wire',
     inputPlaceholder: 'Paste base58 or base64 wire (legacy / v0 / v1). No network.',
     load: 'Decode',
+    clear: 'Clear',
     loading: 'Decoding…',
     offlineNote: 'Offline only — nothing is sent to an RPC or third party.',
     encoding: 'Encoding',
@@ -98,6 +99,7 @@ export const copy = {
     inputPlaceholder:
       '粘贴整笔交易的序列化数据（base58 或 base64；legacy / v0 / v1）。默认不访问网络。',
     load: '解码',
+    clear: '清空',
     loading: '解码中…',
     offlineNote: '纯离线 — 不会请求 RPC，也不会把数据发给第三方。',
     encoding: '编码',

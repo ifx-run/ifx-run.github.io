@@ -22,16 +22,23 @@ import {
   type DataEncoding,
 } from '../lib/solana/bytes'
 import { getStoredRpcUrl, setStoredRpcUrl } from '../lib/solana/rpc'
+import {
+  clearStoredWire,
+  getStoredWire,
+  setStoredWire,
+} from '../lib/solana/wire-storage'
 
 const DATA_ENCODINGS: DataEncoding[] = ['hex', 'base58', 'base64']
+const AUTO_DECODE_MS = 280
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
   const inputId = useId()
   const rpcId = useId()
   const abortRef = useRef<AbortController | null>(null)
+  const decodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(() => getStoredWire())
   const [rpcDraft, setRpcDraft] = useState(() => getStoredRpcUrl())
   const [result, setResult] = useState<ExploredTransaction | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -45,10 +52,20 @@ export function ExplorerWorkspace() {
     setSelected(firstIfx >= 0 ? firstIfx : explored.instructions.length ? 0 : null)
   }, [])
 
+  const clearResult = useCallback(() => {
+    setResult(null)
+    setError(null)
+    setRpcError(null)
+    setSelected(null)
+  }, [])
+
   const run = useCallback(
     (raw: string) => {
       const value = raw.trim()
-      if (!value) return
+      if (!value) {
+        clearResult()
+        return
+      }
 
       abortRef.current?.abort()
       setError(null)
@@ -66,8 +83,41 @@ export function ExplorerWorkspace() {
         }
       }
     },
-    [applyResult, t],
+    [applyResult, clearResult, t],
   )
+
+  const scheduleRun = useCallback(
+    (raw: string, immediate = false) => {
+      if (decodeTimer.current) {
+        clearTimeout(decodeTimer.current)
+        decodeTimer.current = null
+      }
+      if (!raw.trim()) {
+        clearResult()
+        return
+      }
+      if (immediate) {
+        run(raw)
+        return
+      }
+      decodeTimer.current = setTimeout(() => {
+        decodeTimer.current = null
+        run(raw)
+      }, AUTO_DECODE_MS)
+    },
+    [clearResult, run],
+  )
+
+  useEffect(() => {
+    const stored = getStoredWire()
+    if (stored) run(stored)
+    return () => {
+      abortRef.current?.abort()
+      if (decodeTimer.current) clearTimeout(decodeTimer.current)
+    }
+    // Restore once on mount; later edits go through onInputChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const resolveAlts = useCallback(async () => {
     const value = input.trim()
@@ -99,17 +149,36 @@ export function ExplorerWorkspace() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    run(input)
+    scheduleRun(input, true)
+  }
+
+  function onClear() {
+    abortRef.current?.abort()
+    if (decodeTimer.current) {
+      clearTimeout(decodeTimer.current)
+      decodeTimer.current = null
+    }
+    clearStoredWire()
+    setInput('')
+    clearResult()
+    setResolving(false)
+  }
+
+  function onInputChange(value: string) {
+    setInput(value)
+    setStoredWire(value)
+    scheduleRun(value)
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault()
-      run(input)
+      scheduleRun(input, true)
     }
   }
 
   const showAltRpc = Boolean(result?.needsAltRpc)
+  const hasInput = Boolean(input.trim())
 
   return (
     <div className="workspace">
@@ -124,12 +193,20 @@ export function ExplorerWorkspace() {
           spellCheck={false}
           placeholder={t.inputPlaceholder}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onKeyDown}
         />
         <div className="ingress-actions">
-          <button type="submit" className="primary" disabled={!input.trim()}>
+          <button type="submit" className="primary" disabled={!hasInput}>
             {t.load}
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            disabled={!hasInput && !result && !error}
+            onClick={onClear}
+          >
+            {t.clear}
           </button>
           <span className="kbd-hint">⌘/Ctrl + Enter</span>
         </div>
