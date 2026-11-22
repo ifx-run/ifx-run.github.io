@@ -1,10 +1,12 @@
 import {
   useCallback,
+  useEffect,
   useId,
   useRef,
   useState,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
@@ -14,8 +16,14 @@ import {
   type ExploredInstruction,
   type ExploredTransaction,
 } from '../lib/solana/parse-tx'
-import { shortenAddress } from '../lib/solana/bytes'
+import {
+  formatBytes,
+  shortenAddress,
+  type DataEncoding,
+} from '../lib/solana/bytes'
 import { getStoredRpcUrl, setStoredRpcUrl } from '../lib/solana/rpc'
+
+const DATA_ENCODINGS: DataEncoding[] = ['hex', 'base58', 'base64']
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
@@ -327,6 +335,30 @@ function InstructionTimeline({
 
 function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
   const { t } = useApp()
+  const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
+  const [flashAcct, setFlashAcct] = useState<number | null>(null)
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    setDataEnc('hex')
+    setFlashAcct(null)
+  }, [ix.index, ix.programId, ix.dataLen])
+
+  useEffect(() => {
+    return () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+    }
+  }, [])
+
+  const focusAccount = useCallback((acctIndex: number) => {
+    if (acctIndex < 0 || acctIndex >= ix.accounts.length) return
+    const el = document.getElementById(`ix-acct-${ix.index}-${acctIndex}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    setFlashAcct(acctIndex)
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashAcct(null), 1200)
+  }, [ix.accounts.length, ix.index])
+
   const namedTitle =
     ix.programLabel && ix.ixLabel
       ? `${ix.programLabel} · ${ix.ixLabel}`
@@ -381,7 +413,14 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       <h3>{t.accounts}</h3>
       <ul className="acct-list">
         {ix.accounts.map((a, i) => (
-          <li key={`${a.address}-${i}`}>
+          <li
+            key={`${a.address}-${i}`}
+            id={`ix-acct-${ix.index}-${i}`}
+            className={flashAcct === i ? 'is-flash' : undefined}
+          >
+            <span className="acct-idx" title={t.accountIndex}>
+              #{i}
+            </span>
             <span className="acct-flags" aria-label={roleAria(a.role, t)}>
               {a.role.signer && (
                 <span className="flag flag-signer">{t.accountRoleSigner}</span>
@@ -403,7 +442,7 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
           <ul className="l1-lines">
             {ix.l1.lines.map((line, i) => (
               <li key={i}>
-                <code>{line}</code>
+                <L1LineWithAcctLinks line={line} onAcctClick={focusAccount} />
               </li>
             ))}
           </ul>
@@ -415,7 +454,7 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       )}
       {ix.known?.args && (
         <>
-          <h3>{t.argsL1}</h3>
+          <h3>{t.argsKnown}</h3>
           <ul className="l1-lines">
             {Object.entries(ix.known.args).map(([k, v]) => (
               <li key={k}>
@@ -428,11 +467,24 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
         </>
       )}
       <h3>{t.data}</h3>
-      <p>
-        <code>
-          {ix.dataLen} B · {ix.dataHex}
-        </code>
-      </p>
+      <div className="data-enc-row" role="group" aria-label={t.dataEncoding}>
+        {DATA_ENCODINGS.map((enc) => (
+          <button
+            key={enc}
+            type="button"
+            className={['enc-chip', dataEnc === enc ? 'is-active' : ''].join(
+              ' ',
+            )}
+            onClick={() => setDataEnc(enc)}
+          >
+            {enc}
+          </button>
+        ))}
+        <span className="muted data-enc-len">{ix.dataLen} B</span>
+      </div>
+      <pre className="data-blob">
+        {ix.dataLen === 0 ? '—' : formatBytes(ix.data, dataEnc)}
+      </pre>
       {ix.isIfx && !ix.l1 && (
         <p className="muted">{t.payloadBytes}</p>
       )}
@@ -443,6 +495,42 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       </div>
     </section>
   )
+}
+
+/** Turn `#5` / `lamports(#5)` refs in L1 lines into clickable account links. */
+function L1LineWithAcctLinks({
+  line,
+  onAcctClick,
+}: {
+  line: string
+  onAcctClick: (index: number) => void
+}) {
+  const nodes: ReactNode[] = []
+  const re = /#(\d+)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  let key = 0
+  while ((m = re.exec(line)) !== null) {
+    if (m.index > last) {
+      nodes.push(<span key={key++}>{line.slice(last, m.index)}</span>)
+    }
+    const idx = Number(m[1])
+    nodes.push(
+      <button
+        key={key++}
+        type="button"
+        className="acct-ref"
+        onClick={() => onAcctClick(idx)}
+      >
+        #{idx}
+      </button>,
+    )
+    last = m.index + m[0].length
+  }
+  if (last < line.length) {
+    nodes.push(<span key={key++}>{line.slice(last)}</span>)
+  }
+  return <code className="l1-line-code">{nodes}</code>
 }
 
 function roleAria(

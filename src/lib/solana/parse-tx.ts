@@ -74,6 +74,8 @@ export type ExploredInstruction = {
   discriminator?: number
   docsSlug?: string
   accounts: ExploredAccount[]
+  /** Full instruction data bytes (for hex / base58 / base64 toggle). */
+  data: Uint8Array
   dataHex: string
   dataLen: number
   summary: string
@@ -213,6 +215,7 @@ function mapInstructions(
             discriminator: decoded.discriminator,
             docsSlug: docsSlugForIfxIx(decoded.name),
             accounts,
+            data,
             dataHex: bytesToHex(data, 32),
             dataLen: data.length,
             summary: l1
@@ -229,6 +232,7 @@ function mapInstructions(
             isIfx: true,
             ifxCluster: ifx.cluster,
             accounts,
+            data,
             dataHex: bytesToHex(data, 32),
             dataLen: data.length,
             summary: `Ifx · unknown disc · ${data.length} B`,
@@ -243,6 +247,7 @@ function mapInstructions(
         isIfx: true,
         ifxCluster: ifx.cluster,
         accounts,
+        data,
         dataHex: bytesToHex(data, 16),
         dataLen: data.length,
         summary: 'Ifx',
@@ -260,6 +265,7 @@ function mapInstructions(
         ixName: known.name,
         isIfx: false,
         accounts,
+        data,
         dataHex: bytesToHex(data, 24),
         dataLen: data.length,
         summary: known.summary,
@@ -272,6 +278,7 @@ function mapInstructions(
       programId,
       isIfx: false,
       accounts,
+      data,
       dataHex: bytesToHex(data, 16),
       dataLen: data.length,
       summary: `${shortenAddress(programId, 6, 4)} · ${data.length} B`,

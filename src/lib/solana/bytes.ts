@@ -1,6 +1,12 @@
-import { getBase58Encoder, getBase64Encoder } from '@solana/kit'
+import {
+  getBase58Decoder,
+  getBase58Encoder,
+  getBase64Decoder,
+  getBase64Encoder,
+} from '@solana/kit'
 
 export type WireEncoding = 'base58' | 'base64'
+export type DataEncoding = 'hex' | 'base58' | 'base64'
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]+$/
 const BASE64_RE = /^[A-Za-z0-9+/_-]+={0,2}$/
@@ -61,12 +67,26 @@ export function decodeWireInput(raw: string): {
   return decodeWireCandidates(raw)[0]!
 }
 
-export function bytesToHex(bytes: Uint8Array, max = 24): string {
-  const slice = bytes.subarray(0, max)
+export function bytesToHex(bytes: Uint8Array, max?: number): string {
+  const slice =
+    max !== undefined && bytes.length > max
+      ? bytes.subarray(0, max)
+      : bytes
   let hex = ''
   for (const b of slice) hex += b.toString(16).padStart(2, '0')
-  if (bytes.length > max) hex += '…'
+  if (max !== undefined && bytes.length > max) hex += '…'
   return hex
+}
+
+/** Encode instruction / account bytes for display (full payload). */
+export function formatBytes(
+  bytes: Uint8Array,
+  encoding: DataEncoding,
+): string {
+  if (bytes.byteLength === 0) return ''
+  if (encoding === 'hex') return bytesToHex(bytes)
+  if (encoding === 'base58') return String(getBase58Decoder().decode(bytes))
+  return String(getBase64Decoder().decode(bytes))
 }
 
 export function shortenAddress(addr: string, head = 4, tail = 4): string {
