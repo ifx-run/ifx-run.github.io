@@ -449,18 +449,20 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
                 {idxLabel}
               </span>
               <span className="acct-flags" aria-label={roleAria(a.role, t)}>
-                {a.role.signer && (
-                  <span className="flag flag-signer">{t.accountRoleSigner}</span>
-                )}
-                {a.role.writable ? (
-                  <span className="flag flag-writable">
-                    {t.accountRoleWritable}
-                  </span>
-                ) : (
-                  <span className="flag flag-readonly">
-                    {t.accountRoleReadonly}
-                  </span>
-                )}
+                <span
+                  className={
+                    a.role.signer ? 'flag flag-signer' : 'flag flag-off'
+                  }
+                >
+                  {t.accountRoleSigner}
+                </span>
+                <span
+                  className={
+                    a.role.writable ? 'flag flag-writable' : 'flag flag-off'
+                  }
+                >
+                  {t.accountRoleWritable}
+                </span>
               </span>
               <code className="break">{a.address}</code>
             </li>
@@ -595,10 +597,10 @@ function roleAria(
   role: ExploredInstruction['accounts'][number]['role'],
   t: ReturnType<typeof useApp>['t'],
 ): string {
-  const parts: string[] = []
-  if (role.signer) parts.push(t.accountRoleSigner)
-  parts.push(role.writable ? t.accountRoleWritable : t.accountRoleReadonly)
-  return parts.join(', ')
+  return [
+    `${t.accountRoleSigner}: ${role.signer}`,
+    `${t.accountRoleWritable}: ${role.writable}`,
+  ].join(', ')
 }
 
 function jsonReplacer(_key: string, value: unknown): unknown {
