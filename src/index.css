@@ -821,6 +821,22 @@ textarea {
   color: var(--accent);
   font-size: 0.95em;
 }
+.detail-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  line-height: 1.35;
+}
+.detail-title-idx {
+  flex: 0 0 auto;
+}
+.detail-title-addr {
+  font-size: 0.85em;
+  font-weight: 500;
+  /* Detail pane has room — always show the full program id (list view may shorten). */
+  overflow-wrap: anywhere;
+}
 
 .acct-list {
   list-style: none;

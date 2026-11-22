@@ -327,20 +327,24 @@ function InstructionTimeline({
 
 function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
   const { t } = useApp()
-  const title =
+  const namedTitle =
     ix.programLabel && ix.ixLabel
       ? `${ix.programLabel} · ${ix.ixLabel}`
       : ix.programLabel
         ? ix.programLabel
-        : ix.ifxName
-          ? ix.ifxName
-          : shortenAddress(ix.programId, 8, 6)
+        : (ix.ifxName ?? null)
 
   return (
     <section className="panel detail-panel">
-      <h2>
-        #{ix.index}{' '}
-        <span className={ix.isIfx ? 'ifx-badge' : 'known-badge'}>{title}</span>
+      <h2 className="detail-title">
+        <span className="detail-title-idx">#{ix.index}</span>{' '}
+        {namedTitle ? (
+          <span className={ix.isIfx ? 'ifx-badge' : 'known-badge'}>
+            {namedTitle}
+          </span>
+        ) : (
+          <code className="break detail-title-addr">{ix.programId}</code>
+        )}
       </h2>
       <dl className="ix-meta-dl">
         <div>
