@@ -273,9 +273,7 @@ export function ExplorerWorkspace() {
             {wireTrimmed ? (
               <code className="ingress-preview-wire" aria-label={t.inputLabel}>
                 <span className="ingress-preview-head">{wirePreviewHead}</span>
-                <span className="ingress-preview-mid" aria-hidden="true">
-                  {'…'.repeat(240)}
-                </span>
+                <span className="ingress-preview-mid" aria-hidden="true" />
                 {wirePreviewTail ? (
                   <span className="ingress-preview-tail">{wirePreviewTail}</span>
                 ) : null}

@@ -437,12 +437,16 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ingress {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  min-width: 0;
+  max-width: 100%;
   background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -465,8 +469,10 @@ textarea {
   flex-shrink: 0;
 }
 .ingress-preview {
-  width: 100%;
   display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   text-align: left;
   padding: 0.4rem 0.55rem;
   border: 1px solid var(--line);
@@ -485,6 +491,7 @@ textarea {
   align-items: center;
   gap: 0.15rem;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   font-size: 0.82rem;
   line-height: 1.35;
@@ -495,14 +502,25 @@ textarea {
   color: var(--text);
 }
 .ingress-preview-mid {
+  position: relative;
   flex: 1 1 0%;
   min-width: 2.5rem;
+  align-self: stretch;
   overflow: hidden;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
   color: var(--muted);
   opacity: 0.75;
   user-select: none;
+}
+/* Out of flow so a long fill never expands the page width. */
+.ingress-preview-mid::before {
+  content: '…………………………………………………………………………………………………………………………………………………………………………';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  pointer-events: none;
 }
 
 .field-label {
