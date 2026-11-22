@@ -22,14 +22,44 @@ function parseLangParam(raw: string | null): Lang | null {
   return null
 }
 
-export function DocsIndexPage() {
-  const { t, lang, setLang } = useApp()
+/** Apply ?lang= from the URL into app state (URL wins on navigation). */
+function useLangFromSearchParams() {
+  const { lang, setLang } = useApp()
   const [params] = useSearchParams()
 
   useEffect(() => {
     const fromUrl = parseLangParam(params.get('lang'))
     if (fromUrl && fromUrl !== lang) setLang(fromUrl)
-  }, [params, lang, setLang])
+    // Only react to URL changes — do not depend on `lang` or toggle fights the URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [params, setLang])
+}
+
+/** Keep ?lang= aligned when the user toggles language in the chrome. */
+function useSearchParamsFromLang() {
+  const { lang } = useApp()
+  const [params, setSearchParams] = useSearchParams()
+
+  useEffect(() => {
+    if (params.get('lang') === lang) return
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (next.get('lang') === lang) return prev
+        next.set('lang', lang)
+        return next
+      },
+      { replace: true },
+    )
+    // Only react to lang changes from the UI toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [lang, setSearchParams])
+}
+
+export function DocsIndexPage() {
+  const { t, lang } = useApp()
+  useLangFromSearchParams()
+  useSearchParamsFromLang()
 
   return (
     <div className="docs-layout">
@@ -60,31 +90,14 @@ export function DocsIndexPage() {
 
 export function DocsArticlePage() {
   const { slug } = useParams()
-  const { t, lang, setLang } = useApp()
-  const [params, setSearchParams] = useSearchParams()
+  const { t, lang } = useApp()
   const navigate = useNavigate()
   const entry = slug ? getDoc(slug) : undefined
   const [html, setHtml] = useState<string>('')
   const [err, setErr] = useState<string | null>(null)
 
-  // In-doc English|中文 links navigate to ?lang=… — pull into site language
-  useEffect(() => {
-    const fromUrl = parseLangParam(params.get('lang'))
-    if (fromUrl && fromUrl !== lang) setLang(fromUrl)
-  }, [params, lang, setLang])
-
-  // Keep ?lang= in the URL so top-right toggle and shareable links stay aligned
-  useEffect(() => {
-    if (params.get('lang') === lang) return
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        next.set('lang', lang)
-        return next
-      },
-      { replace: true },
-    )
-  }, [lang, params, setSearchParams])
+  useLangFromSearchParams()
+  useSearchParamsFromLang()
 
   useEffect(() => {
     if (!entry) return
@@ -108,7 +121,6 @@ export function DocsArticlePage() {
     const href = anchor.getAttribute('href')
     if (!href || href.startsWith('http') || href.startsWith('mailto:')) return
     if (href.startsWith('#')) return
-    // In-app docs / explorer links — SPA navigate (keeps ?lang= working)
     if (href.startsWith('/')) {
       e.preventDefault()
       navigate(href)
