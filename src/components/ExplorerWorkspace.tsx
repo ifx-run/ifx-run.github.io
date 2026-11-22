@@ -19,6 +19,7 @@ import {
   type ExploredTransaction,
 } from '../lib/solana/parse-tx'
 import {
+  decodeWireInput,
   formatBytes,
   shortenAddress,
   type DataEncoding,
@@ -204,6 +205,14 @@ export function ExplorerWorkspace() {
   const wirePreviewHead = wireTrimmed.slice(0, 14)
   const wirePreviewTail =
     wireTrimmed.length > 28 ? wireTrimmed.slice(-14) : ''
+  const wireBytes = useMemo(() => {
+    if (!result || !wireTrimmed) return null
+    try {
+      return decodeWireInput(wireTrimmed).bytes
+    } catch {
+      return null
+    }
+  }, [result, wireTrimmed])
 
   return (
     <div className="workspace">
@@ -218,6 +227,7 @@ export function ExplorerWorkspace() {
             {t.inputLabel}
           </label>
           <div className="ingress-head-actions">
+            {wireBytes && <CopyBytesButtons bytes={wireBytes} />}
             {canCollapseIngress && (
               <button
                 type="button"
@@ -274,6 +284,7 @@ export function ExplorerWorkspace() {
               <button type="submit" className="primary" disabled={!hasInput}>
                 {t.load}
               </button>
+              {wireBytes && <CopyBytesButtons bytes={wireBytes} />}
               <span className="kbd-hint">⌘/Ctrl + Enter</span>
             </div>
             {!showAltRpc && <p className="offline-note">{t.offlineNote}</p>}
@@ -352,6 +363,53 @@ function EmptyState() {
       <h2>{t.emptyTitle}</h2>
       <p>{t.emptyBody}</p>
     </section>
+  )
+}
+
+function CopyBytesButtons({ bytes }: { bytes: Uint8Array }) {
+  const { t } = useApp()
+  const [copied, setCopied] = useState<DataEncoding | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [])
+
+  async function copy(enc: DataEncoding) {
+    const text = formatBytes(bytes, enc)
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(enc)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => setCopied(null), 1200)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (bytes.byteLength === 0) return null
+
+  return (
+    <div className="copy-bytes" role="group" aria-label={t.copyAs}>
+      <span className="copy-bytes-label">{t.copyAs}</span>
+      {DATA_ENCODINGS.map((enc) => (
+        <button
+          key={enc}
+          type="button"
+          className={[
+            'ghost tiny copy-bytes-btn',
+            copied === enc ? 'is-copied' : '',
+          ].join(' ')}
+          title={t.copyFormat(enc)}
+          onClick={() => void copy(enc)}
+        >
+          {copied === enc ? t.addressCopied : enc}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -1431,6 +1489,7 @@ function InstructionBody({
           </button>
         ))}
         <span className="muted data-enc-len">{ix.dataLen} B</span>
+        {ix.dataLen > 0 && <CopyBytesButtons bytes={ix.data} />}
       </div>
       <pre className="data-blob">
         {ix.dataLen === 0 ? '—' : formatBytes(ix.data, dataEnc)}

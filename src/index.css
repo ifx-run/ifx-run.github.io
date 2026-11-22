@@ -519,6 +519,22 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.copy-bytes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+.copy-bytes-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-right: 0.1rem;
+}
+.copy-bytes-btn.is-copied {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .primary {
