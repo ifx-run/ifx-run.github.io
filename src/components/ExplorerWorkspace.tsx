@@ -63,15 +63,19 @@ export function ExplorerWorkspace() {
   const [error, setError] = useState<string | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(false)
+  /** After a successful decode, collapse the paste box to one row. */
+  const [ingressExpanded, setIngressExpanded] = useState(true)
 
   const applyResult = useCallback((explored: ExploredTransaction) => {
     setResult(explored)
+    setIngressExpanded(false)
   }, [])
 
   const clearResult = useCallback(() => {
     setResult(null)
     setError(null)
     setRpcError(null)
+    setIngressExpanded(true)
   }, [])
 
   const run = useCallback(
@@ -194,38 +198,75 @@ export function ExplorerWorkspace() {
 
   const showAltRpc = Boolean(result?.needsAltRpc)
   const hasInput = Boolean(input.trim())
+  const canCollapseIngress = Boolean(result)
+  const ingressCollapsed = canCollapseIngress && !ingressExpanded
+  const wirePreview =
+    input.trim().length > 72
+      ? `${input.trim().slice(0, 40)}…${input.trim().slice(-24)}`
+      : input.trim()
 
   return (
     <div className="workspace">
-      <form className="ingress" onSubmit={onSubmit}>
-        <label className="field-label" htmlFor={inputId}>
-          {t.inputLabel}
-        </label>
-        <textarea
-          id={inputId}
-          className="ingress-input"
-          rows={5}
-          spellCheck={false}
-          placeholder={t.inputPlaceholder}
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        <div className="ingress-actions">
-          <button type="submit" className="primary" disabled={!hasInput}>
-            {t.load}
-          </button>
+      <form
+        className={['ingress', ingressCollapsed ? 'is-collapsed' : ''].join(
+          ' ',
+        )}
+        onSubmit={onSubmit}
+      >
+        <div className="ingress-head">
+          <label className="field-label" htmlFor={inputId}>
+            {t.inputLabel}
+          </label>
+          <div className="ingress-head-actions">
+            {canCollapseIngress && (
+              <button
+                type="button"
+                className="ghost tiny"
+                onClick={() => setIngressExpanded((v) => !v)}
+              >
+                {ingressExpanded ? t.collapseIngress : t.expandIngress}
+              </button>
+            )}
+            <button
+              type="button"
+              className="ghost tiny"
+              disabled={!hasInput && !result && !error}
+              onClick={onClear}
+            >
+              {t.clear}
+            </button>
+          </div>
+        </div>
+        {ingressCollapsed ? (
           <button
             type="button"
-            className="ghost"
-            disabled={!hasInput && !result && !error}
-            onClick={onClear}
+            className="ingress-preview"
+            title={t.expandIngress}
+            onClick={() => setIngressExpanded(true)}
           >
-            {t.clear}
+            <code>{wirePreview || '—'}</code>
           </button>
-          <span className="kbd-hint">⌘/Ctrl + Enter</span>
-        </div>
-        {!showAltRpc && <p className="offline-note">{t.offlineNote}</p>}
+        ) : (
+          <>
+            <textarea
+              id={inputId}
+              className="ingress-input"
+              rows={5}
+              spellCheck={false}
+              placeholder={t.inputPlaceholder}
+              value={input}
+              onChange={(e) => onInputChange(e.target.value)}
+              onKeyDown={onKeyDown}
+            />
+            <div className="ingress-actions">
+              <button type="submit" className="primary" disabled={!hasInput}>
+                {t.load}
+              </button>
+              <span className="kbd-hint">⌘/Ctrl + Enter</span>
+            </div>
+            {!showAltRpc && <p className="offline-note">{t.offlineNote}</p>}
+          </>
+        )}
       </form>
 
       {error && (
