@@ -332,12 +332,12 @@ function InstructionTimeline({
 function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
-  const [flashAcct, setFlashAcct] = useState<number | null>(null)
+  const [flashAccts, setFlashAccts] = useState<number[]>([])
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setDataEnc('hex')
-    setFlashAcct(null)
+    setFlashAccts([])
   }, [ix.index, ix.programId, ix.dataLen])
 
   useEffect(() => {
@@ -346,18 +346,33 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
     }
   }, [])
 
-  /** L1 `#N` is a remaining_accounts index; frame is always keys[0]. */
-  const focusRemainingAccount = useCallback(
-    (remainingIndex: number) => {
-      const abs = ix.isIfx ? remainingIndex + 1 : remainingIndex
-      if (abs < 0 || abs >= ix.accounts.length) return
-      const el = document.getElementById(`ix-acct-${ix.index}-${abs}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      setFlashAcct(abs)
+  /**
+   * Highlight remaining_accounts slice `[start, start+len)`.
+   * Ifx: wire indexes skip frame at keys[0], so abs = remaining + 1.
+   */
+  const focusRemainingRange = useCallback(
+    (start: number, len: number) => {
+      if (len <= 0) return
+      const absList: number[] = []
+      for (let i = 0; i < len; i++) {
+        const rem = start + i
+        const abs = ix.isIfx ? rem + 1 : rem
+        if (abs >= 0 && abs < ix.accounts.length) absList.push(abs)
+      }
+      if (absList.length === 0) return
+      document
+        .getElementById(`ix-acct-${ix.index}-${absList[0]}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      setFlashAccts(absList)
       if (flashTimer.current) clearTimeout(flashTimer.current)
-      flashTimer.current = setTimeout(() => setFlashAcct(null), 1200)
+      flashTimer.current = setTimeout(() => setFlashAccts([]), 1200)
     },
     [ix.accounts.length, ix.index, ix.isIfx],
+  )
+
+  const focusRemainingAccount = useCallback(
+    (remainingIndex: number) => focusRemainingRange(remainingIndex, 1),
+    [focusRemainingRange],
   )
 
   const namedTitle =
@@ -428,7 +443,7 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
             <li
               key={`${a.address}-${i}`}
               id={`ix-acct-${ix.index}-${i}`}
-              className={flashAcct === i ? 'is-flash' : undefined}
+              className={flashAccts.includes(i) ? 'is-flash' : undefined}
             >
               <span className="acct-idx" title={idxTitle}>
                 {idxLabel}
@@ -462,6 +477,7 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
                 <L1LineWithAcctLinks
                   line={line}
                   onAcctClick={focusRemainingAccount}
+                  onRangeClick={focusRemainingRange}
                 />
               </li>
             ))}
@@ -517,16 +533,22 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
   )
 }
 
-/** Turn `#5` / `lamports(#5)` refs in L1 lines into clickable account links. */
+/**
+ * Turn `#5` and `accts[0..+3]` in L1 lines into clickable remaining-account links.
+ * Ranges use remaining indexes (after frame); single `#N` likewise.
+ */
 function L1LineWithAcctLinks({
   line,
   onAcctClick,
+  onRangeClick,
 }: {
   line: string
   onAcctClick: (index: number) => void
+  onRangeClick: (start: number, len: number) => void
 }) {
   const nodes: ReactNode[] = []
-  const re = /#(\d+)/g
+  // Prefer accts[start..+len] before bare #N so nested digits aren't split.
+  const re = /accts\[(\d+)\.\.\+(\d+)\]|#(\d+)/g
   let last = 0
   let m: RegExpExecArray | null
   let key = 0
@@ -534,17 +556,33 @@ function L1LineWithAcctLinks({
     if (m.index > last) {
       nodes.push(<span key={key++}>{line.slice(last, m.index)}</span>)
     }
-    const idx = Number(m[1])
-    nodes.push(
-      <button
-        key={key++}
-        type="button"
-        className="acct-ref"
-        onClick={() => onAcctClick(idx)}
-      >
-        #{idx}
-      </button>,
-    )
+    if (m[1] !== undefined && m[2] !== undefined) {
+      const start = Number(m[1])
+      const len = Number(m[2])
+      nodes.push(
+        <button
+          key={key++}
+          type="button"
+          className="acct-ref acct-ref-range"
+          title={`remaining [${start} .. ${start + len})`}
+          onClick={() => onRangeClick(start, len)}
+        >
+          {m[0]}
+        </button>,
+      )
+    } else {
+      const idx = Number(m[3])
+      nodes.push(
+        <button
+          key={key++}
+          type="button"
+          className="acct-ref"
+          onClick={() => onAcctClick(idx)}
+        >
+          #{idx}
+        </button>,
+      )
+    }
     last = m.index + m[0].length
   }
   if (last < line.length) {
