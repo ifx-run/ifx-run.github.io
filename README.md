@@ -6,7 +6,7 @@ Official **Ifx** site: a pure-frontend **transaction explorer** (+ synced docs) 
 - Site repo (org Pages): [github.com/ifx-run/ifx-run.github.io](https://github.com/ifx-run/ifx-run.github.io)
 - Live: **https://ifx-run.github.io/** · custom domain **https://ifx.run**
 
-This is a **toolbench**, not a marketing landing page. Default route `/` is the Explorer.
+`/` is a short product intro (value prop + CTAs). **Explorer** lives at `/explorer`; docs at `/docs`.
 
 ## Requirements
 

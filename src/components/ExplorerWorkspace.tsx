@@ -9,7 +9,6 @@ import {
 } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { DEFAULT_IFX_PROGRAM_ID } from '../lib/ifx/program-ids'
 import { SAMPLE_TXS } from '../lib/samples'
 import { fetchAndExploreTransaction, RpcExploreError } from '../lib/solana/fetch-tx'
 import {
@@ -64,12 +63,14 @@ export function ExplorerWorkspace() {
         if (looksLikeSignature(value)) {
           explored = await fetchAndExploreTransaction(value, rpcUrl, ac.signal)
           if (!opts?.fromQuery) {
-            navigate(`/?tx=${encodeURIComponent(value)}`, { replace: true })
+            navigate(`/explorer?tx=${encodeURIComponent(value)}`, {
+              replace: true,
+            })
           }
         } else {
           explored = exploreFromWire(value)
           if (!opts?.fromQuery) {
-            navigate('/', { replace: true })
+            navigate('/explorer', { replace: true })
           }
         }
         if (!ac.signal.aborted) {
@@ -220,28 +221,8 @@ function EmptyState() {
   const { t } = useApp()
   return (
     <section className="empty">
-      <h1>{t.emptyTitle}</h1>
+      <h2>{t.emptyTitle}</h2>
       <p>{t.emptyBody}</p>
-      <ul className="empty-links">
-        <li>
-          <a href="https://github.com/ifx-run/ifx" target="_blank" rel="noreferrer">
-            {t.github}
-          </a>
-        </li>
-        <li>
-          <a
-            href="https://www.npmjs.com/package/@ifx-run/sdk"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t.npm}
-          </a>
-        </li>
-        <li>
-          <span>{t.programId}</span>{' '}
-          <code>{DEFAULT_IFX_PROGRAM_ID}</code>
-        </li>
-      </ul>
     </section>
   )
 }

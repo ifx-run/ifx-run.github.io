@@ -21,6 +21,13 @@ export const copy = {
     brand: 'Ifx',
     navExplorer: 'Explorer',
     navDocs: 'Docs',
+    homeKicker: 'Solana on-chain orchestration',
+    homeHeadline:
+      'Read, branch, and CPI inside one transaction — without a new wrapper program each time.',
+    homeSupport:
+      'General explorers still mishandle Ifx instructions and SIMD-0385 v1 packets. Decode them here; read the design when you build.',
+    ctaExplorer: 'Open Explorer',
+    ctaDocs: 'Read the docs',
     tagline:
       'On-chain Solana orchestration — explore Ifx instructions that Solscan cannot render.',
     inputLabel: 'Signature or wire',
@@ -32,9 +39,9 @@ export const copy = {
     rpcSave: 'Save',
     rpcReset: 'Default',
     samples: 'Samples',
-    emptyTitle: 'Ifx transaction explorer',
+    emptyTitle: 'Paste a signature or wire',
     emptyBody:
-      'Paste a signature or wire. Non-Ifx instructions stay dimmed; Ifx is highlighted (L0: program + discriminator).',
+      'Non-Ifx instructions stay dimmed; Ifx is highlighted (L0: program + discriminator).',
     links: 'Links',
     github: 'GitHub',
     npm: 'npm SDK',
@@ -65,6 +72,13 @@ export const copy = {
     brand: 'Ifx',
     navExplorer: '浏览器',
     navDocs: '文档',
+    homeKicker: 'Solana 链上编排',
+    homeHeadline:
+      '同一笔交易里读状态、分支、CPI——不必为每种胶水逻辑再部署一个 wrapper program。',
+    homeSupport:
+      '通用浏览器仍解不好 Ifx 指令与 SIMD-0385 v1 包。在这里解码交易；动手前先读设计文档。',
+    ctaExplorer: '打开浏览器',
+    ctaDocs: '阅读文档',
     tagline:
       'Solana 链上编排 — 查看 Solscan 无法正确渲染的 Ifx 指令。',
     inputLabel: '签名或 wire',
@@ -76,9 +90,9 @@ export const copy = {
     rpcSave: '保存',
     rpcReset: '默认',
     samples: '样例',
-    emptyTitle: 'Ifx 交易浏览器',
+    emptyTitle: '粘贴签名或 wire',
     emptyBody:
-      '粘贴签名或 wire。非 Ifx 指令灰显；Ifx 高亮（L0：program + discriminator）。',
+      '非 Ifx 指令灰显；Ifx 高亮（L0：program + discriminator）。',
     links: '链接',
     github: 'GitHub',
     npm: 'npm SDK',

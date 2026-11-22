@@ -8,18 +8,11 @@ export function Layout() {
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="topbar-brand">
-          <NavLink to="/" className="logo" end>
-            {t.brand}
-          </NavLink>
-          <span className="topbar-tagline" title={t.tagline}>
-            explorer
-          </span>
-        </div>
+        <NavLink to="/" className="logo" end>
+          {t.brand}
+        </NavLink>
         <nav className="topbar-nav" aria-label="Primary">
-          <NavLink to="/" end>
-            {t.navExplorer}
-          </NavLink>
+          <NavLink to="/explorer">{t.navExplorer}</NavLink>
           <NavLink to="/docs">{t.navDocs}</NavLink>
           <a
             href="https://github.com/ifx-run/ifx"
@@ -38,11 +31,14 @@ export function Layout() {
       </main>
       <footer className="footer">
         <span>
-          {t.programId}:{' '}
-          <code>{DEFAULT_IFX_PROGRAM_ID}</code>
+          {t.programId}: <code>{DEFAULT_IFX_PROGRAM_ID}</code>
         </span>
         <span className="footer-sep">·</span>
-        <a href="https://www.npmjs.com/package/@ifx-run/sdk" target="_blank" rel="noreferrer">
+        <a
+          href="https://www.npmjs.com/package/@ifx-run/sdk"
+          target="_blank"
+          rel="noreferrer"
+        >
           @ifx-run/sdk
         </a>
         <span className="footer-sep">·</span>
