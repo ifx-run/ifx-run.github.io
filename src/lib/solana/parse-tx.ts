@@ -12,6 +12,7 @@ import {
   IFX_IX_SHORT,
   type IfxIxName,
 } from '../ifx/decode-l0'
+import { tryDecodeIfxL1, type IfxL1View } from '../ifx/decode-l1'
 import { identifyIfxProgram, type IfxCluster } from '../ifx/program-ids'
 import {
   bytesToHex,
@@ -62,6 +63,8 @@ export type ExploredInstruction = {
   dataHex: string
   dataLen: number
   summary: string
+  /** L1 decoded args + human-readable lines (Ifx only). */
+  l1?: IfxL1View
 }
 
 export type ExploredTransaction = {
@@ -177,19 +180,24 @@ function mapInstructions(
     if (ifx && data.length > 0) {
       try {
         const decoded = decodeIfxInstruction(data)
+        const l1 = tryDecodeIfxL1(data)
+        const short = IFX_IX_SHORT[decoded.name]
         return {
           index,
           programId,
           isIfx: true,
           ifxCluster: ifx.cluster,
           ifxName: decoded.name,
-          ifxShort: IFX_IX_SHORT[decoded.name],
+          ifxShort: short,
           discriminator: decoded.discriminator,
           docsSlug: docsSlugForIfxIx(decoded.name),
           accounts,
           dataHex: bytesToHex(data, 32),
           dataLen: data.length,
-          summary: `${IFX_IX_SHORT[decoded.name]} · disc ${decoded.discriminator} · ${data.length} B`,
+          summary: l1
+            ? `${short} · ${l1.summary}`
+            : `${short} · disc ${decoded.discriminator} · ${data.length} B`,
+          l1: l1 ?? undefined,
         }
       } catch {
         return {
@@ -224,7 +232,7 @@ function decoderNote(altResolved: boolean, needsAltRpc: boolean): string {
   if (altResolved) {
     return 'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 · ALT resolved via RPC'
   }
-  return 'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 disc map · offline wire only'
+  return 'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0/L1 · offline wire only'
 }
 
 function decodeWireToCompiled(raw: string): DecodedWire {

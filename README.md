@@ -42,8 +42,9 @@ Outputs:
 - Packet meta: legacy / v0 / **v1**, wire size, ALT (if any), v1 header (CU limit, loaded-accounts-data-size, …)
 - Instruction timeline: non-Ifx dimmed; Ifx highlighted
 - **L0** Ifx decode: programId (mainnet / devnet / localnet) + 1-byte discriminator → name (`create` / `let` / `assert` / …)
+- **L1** Ifx args: deserialize payload and pretty-print what the instruction does (`let` bindings, `assert` exprs, `if_else` arms, structured/raw CPI, …)
 
-Decoder stack: `@solana/kit` (SIMD-0385 v1-capable) + local L0 disc map aligned with `@ifx-run/sdk` `decodeIfxInstruction`. **L1 args / L2 SSA / L3 logs** are planned next — not in MVP.
+Decoder stack: `@solana/kit` (SIMD-0385 v1-capable) + local L0/L1 codecs aligned with `@ifx-run/sdk` wire layout. **L2 SSA cross-refs / L3 logs** are next.
 
 This site is **read-only** (parse / display). It does not upgrade packets to v1 or compose / send transactions.
 
@@ -120,9 +121,9 @@ public/CNAME
 
 ## Roadmap (site)
 
-1. **MVP (this)** — GH Pages + CNAME; offline base58/base64 wire → Ifx L0 highlight; v0+v1; docs sync render
-2. **Usable** — L1 args pretty-print + richer docs deep links
-3. **Enhanced** — L2 binding cross-refs; L3 logs / if_else arm; local wire samples
+1. **MVP** — GH Pages + CNAME; offline base58/base64 wire → Ifx L0 highlight; v0+v1; docs sync render
+2. **Usable (this)** — L1 args pretty-print (what each Ifx ix does)
+3. **Enhanced** — L2 binding cross-refs; L3 logs / taken if_else arm; local wire samples
 
 ## License
 

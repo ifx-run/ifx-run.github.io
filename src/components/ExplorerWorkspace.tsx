@@ -349,16 +349,30 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
         ))}
         {ix.accounts.length === 0 && <li className="muted">—</li>}
       </ul>
+      {ix.l1 && (
+        <>
+          <h3>{t.argsL1}</h3>
+          <ul className="l1-lines">
+            {ix.l1.lines.map((line, i) => (
+              <li key={i}>
+                <code>{line}</code>
+              </li>
+            ))}
+          </ul>
+          <details className="l1-raw">
+            <summary>{t.argsRaw}</summary>
+            <pre>{JSON.stringify(ix.l1.args, jsonReplacer, 2)}</pre>
+          </details>
+        </>
+      )}
       <h3>{t.data}</h3>
       <p>
         <code>
           {ix.dataLen} B · {ix.dataHex}
         </code>
       </p>
-      {ix.isIfx && (
-        <p className="muted">
-          {t.argsL0} — {t.payloadBytes}
-        </p>
+      {ix.isIfx && !ix.l1 && (
+        <p className="muted">{t.payloadBytes}</p>
       )}
       <div className="detail-links">
         {ix.docsSlug && (
@@ -367,4 +381,9 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       </div>
     </section>
   )
+}
+
+function jsonReplacer(_key: string, value: unknown): unknown {
+  if (typeof value === 'bigint') return value.toString()
+  return value
 }

@@ -69,7 +69,8 @@ export const copy = {
     noDocs: 'No docs synced yet. Run npm run sync:docs.',
     docsFootnote: (sha: string) => `docs @ ${sha.slice(0, 7)}`,
     langToggle: '中文',
-    argsL0: 'Args (L1 deserialize — coming soon)',
+    argsL1: 'What this instruction does',
+    argsRaw: 'Raw args (JSON)',
     payloadBytes: 'payload bytes after disc',
   },
   zh: {
@@ -123,7 +124,8 @@ export const copy = {
     noDocs: '尚未同步文档。请运行 npm run sync:docs。',
     docsFootnote: (sha: string) => `docs @ ${sha.slice(0, 7)}`,
     langToggle: 'EN',
-    argsL0: '参数（L1 反序列化 — 即将支持）',
+    argsL1: '这条指令在做什么',
+    argsRaw: '原始参数（JSON）',
     payloadBytes: 'discriminator 后的 payload 字节',
   },
 } as const
