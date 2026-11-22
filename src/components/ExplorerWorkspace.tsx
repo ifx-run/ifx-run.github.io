@@ -303,14 +303,18 @@ function InstructionTimeline({
               type="button"
               className={[
                 'timeline-item',
-                ix.isIfx ? 'is-ifx' : 'is-other',
+                ix.isIfx ? 'is-ifx' : ix.programShort ? 'is-known' : 'is-other',
                 selected === ix.index ? 'is-selected' : '',
               ].join(' ')}
               onClick={() => onSelect(ix.index)}
             >
               <span className="ix-idx">{ix.index}</span>
               <span className="ix-name">
-                {ix.isIfx ? ix.ifxShort ?? 'ifx' : shortenAddress(ix.programId, 5, 4)}
+                {ix.programShort && ix.ixName
+                  ? `${ix.programShort}.${ix.ixName}`
+                  : ix.programShort
+                    ? ix.programShort
+                    : shortenAddress(ix.programId, 5, 4)}
               </span>
               <span className="ix-sum">{ix.summary}</span>
             </button>
@@ -323,28 +327,68 @@ function InstructionTimeline({
 
 function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
   const { t } = useApp()
+  const title =
+    ix.programLabel && ix.ixLabel
+      ? `${ix.programLabel} · ${ix.ixLabel}`
+      : ix.programLabel
+        ? ix.programLabel
+        : ix.ifxName
+          ? ix.ifxName
+          : shortenAddress(ix.programId, 8, 6)
+
   return (
     <section className="panel detail-panel">
       <h2>
         #{ix.index}{' '}
-        {ix.isIfx ? (
-          <span className="ifx-badge">{ix.ifxName}</span>
-        ) : (
-          <code>{shortenAddress(ix.programId, 8, 6)}</code>
-        )}
+        <span className={ix.isIfx ? 'ifx-badge' : 'known-badge'}>{title}</span>
       </h2>
-      {ix.ifxCluster && (
-        <p className="muted">
-          cluster: {ix.ifxCluster} · program{' '}
-          <code>{shortenAddress(ix.programId, 6, 4)}</code>
-        </p>
-      )}
+      <dl className="ix-meta-dl">
+        <div>
+          <dt>{t.program}</dt>
+          <dd>
+            {ix.programLabel ? (
+              <>
+                <strong>{ix.programLabel}</strong>
+                <code className="break">{ix.programId}</code>
+              </>
+            ) : (
+              <code className="break">{ix.programId}</code>
+            )}
+          </dd>
+        </div>
+        {(ix.ixLabel || ix.ifxName) && (
+          <div>
+            <dt>{t.instruction}</dt>
+            <dd>
+              <code>{ix.ixLabel ?? ix.ifxName}</code>
+              {ix.discriminator !== undefined && (
+                <span className="muted"> · disc {ix.discriminator}</span>
+              )}
+            </dd>
+          </div>
+        )}
+        {ix.ifxCluster && (
+          <div>
+            <dt>cluster</dt>
+            <dd>{ix.ifxCluster}</dd>
+          </div>
+        )}
+      </dl>
       <h3>{t.accounts}</h3>
       <ul className="acct-list">
         {ix.accounts.map((a, i) => (
           <li key={`${a.address}-${i}`}>
-            <span className="acct-role">{a.role}</span>
-            <code>{a.address}</code>
+            <span className="acct-flags" aria-label={roleAria(a.role, t)}>
+              {a.role.signer && (
+                <span className="flag flag-signer">{t.accountRoleSigner}</span>
+              )}
+              {a.role.writable ? (
+                <span className="flag flag-writable">{t.accountRoleWritable}</span>
+              ) : (
+                <span className="flag flag-readonly">{t.accountRoleReadonly}</span>
+              )}
+            </span>
+            <code className="break">{a.address}</code>
           </li>
         ))}
         {ix.accounts.length === 0 && <li className="muted">—</li>}
@@ -365,6 +409,20 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
           </details>
         </>
       )}
+      {ix.known?.args && (
+        <>
+          <h3>{t.argsL1}</h3>
+          <ul className="l1-lines">
+            {Object.entries(ix.known.args).map(([k, v]) => (
+              <li key={k}>
+                <code>
+                  {k} = {String(v)}
+                </code>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <h3>{t.data}</h3>
       <p>
         <code>
@@ -381,6 +439,16 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       </div>
     </section>
   )
+}
+
+function roleAria(
+  role: ExploredInstruction['accounts'][number]['role'],
+  t: ReturnType<typeof useApp>['t'],
+): string {
+  const parts: string[] = []
+  if (role.signer) parts.push(t.accountRoleSigner)
+  parts.push(role.writable ? t.accountRoleWritable : t.accountRoleReadonly)
+  return parts.join(', ')
 }
 
 function jsonReplacer(_key: string, value: unknown): unknown {

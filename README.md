@@ -40,9 +40,11 @@ No secrets are required. The explorer stays offline unless a pasted wire uses Ad
 Outputs:
 
 - Packet meta: legacy / v0 / **v1**, wire size, ALT (if any), v1 header (CU limit, loaded-accounts-data-size, …)
-- Instruction timeline: non-Ifx dimmed; Ifx highlighted
+- Instruction timeline: well-known programs by name (`system.transfer`, `token.transfer_checked`, `ifx.let`, …); unknown programs stay shortened addresses
+- Account roles as explicit badges (signer / writable / readonly) — not opaque enum numbers
 - **L0** Ifx decode: programId (mainnet / devnet / localnet) + 1-byte discriminator → name (`create` / `let` / `assert` / …)
 - **L1** Ifx args: deserialize payload and pretty-print what the instruction does (`let` bindings, `assert` exprs, `if_else` arms, structured/raw CPI, …)
+- Official Solana programs (System, Compute Budget, SPL Token / Token-2022, ATA, Stake, ALT, Memo, BPF loader, …): prefer public names + common ix labels; program id and raw data remain visible
 
 Decoder stack: `@solana/kit` (SIMD-0385 v1-capable) + local L0/L1 codecs aligned with `@ifx-run/sdk` wire layout. **L2 SSA cross-refs / L3 logs** are next.
 

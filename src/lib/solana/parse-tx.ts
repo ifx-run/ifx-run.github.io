@@ -15,6 +15,10 @@ import {
 import { tryDecodeIfxL1, type IfxL1View } from '../ifx/decode-l1'
 import { identifyIfxProgram, type IfxCluster } from '../ifx/program-ids'
 import {
+  parseAccountRole,
+  type AccountRoleFlags,
+} from './account-role'
+import {
   bytesToHex,
   decodeWireCandidates,
   type WireEncoding,
@@ -24,6 +28,10 @@ import {
   fetchLoadedAddresses,
   type LoadedAddresses,
 } from './fetch-alts'
+import {
+  identifyKnownInstruction,
+  type KnownInstruction,
+} from './known-programs'
 
 export type PacketVersion = 'legacy' | 0 | 1
 
@@ -47,12 +55,18 @@ export type PacketMeta = {
 
 export type ExploredAccount = {
   address: string
-  role: string
+  role: AccountRoleFlags
 }
 
 export type ExploredInstruction = {
   index: number
   programId: string
+  /** Prefer this in UI when set (Ifx / System / Token / …). */
+  programLabel?: string
+  programShort?: string
+  /** Prefer this over raw address for the ix name column. */
+  ixLabel?: string
+  ixName?: string
   isIfx: boolean
   ifxCluster?: IfxCluster
   ifxName?: IfxIxName
@@ -63,6 +77,8 @@ export type ExploredInstruction = {
   dataHex: string
   dataLen: number
   summary: string
+  /** Well-known Solana program ix decode (non-Ifx). */
+  known?: KnownInstruction
   /** L1 decoded args + human-readable lines (Ifx only). */
   l1?: IfxL1View
 }
@@ -173,43 +189,81 @@ function mapInstructions(
         : new Uint8Array()
     const accounts = (ix.accounts ?? []).map((a) => ({
       address: String(a.address),
-      role: String(a.role),
+      role: parseAccountRole(a.role),
     }))
 
     const ifx = identifyIfxProgram(programId)
-    if (ifx && data.length > 0) {
-      try {
-        const decoded = decodeIfxInstruction(data)
-        const l1 = tryDecodeIfxL1(data)
-        const short = IFX_IX_SHORT[decoded.name]
-        return {
-          index,
-          programId,
-          isIfx: true,
-          ifxCluster: ifx.cluster,
-          ifxName: decoded.name,
-          ifxShort: short,
-          discriminator: decoded.discriminator,
-          docsSlug: docsSlugForIfxIx(decoded.name),
-          accounts,
-          dataHex: bytesToHex(data, 32),
-          dataLen: data.length,
-          summary: l1
-            ? `${short} · ${l1.summary}`
-            : `${short} · disc ${decoded.discriminator} · ${data.length} B`,
-          l1: l1 ?? undefined,
+    if (ifx) {
+      if (data.length > 0) {
+        try {
+          const decoded = decodeIfxInstruction(data)
+          const l1 = tryDecodeIfxL1(data)
+          const short = IFX_IX_SHORT[decoded.name]
+          return {
+            index,
+            programId,
+            programLabel: 'Ifx',
+            programShort: 'ifx',
+            ixLabel: decoded.name,
+            ixName: short,
+            isIfx: true,
+            ifxCluster: ifx.cluster,
+            ifxName: decoded.name,
+            ifxShort: short,
+            discriminator: decoded.discriminator,
+            docsSlug: docsSlugForIfxIx(decoded.name),
+            accounts,
+            dataHex: bytesToHex(data, 32),
+            dataLen: data.length,
+            summary: l1
+              ? `${short} · ${l1.summary}`
+              : `${short} · disc ${decoded.discriminator} · ${data.length} B`,
+            l1: l1 ?? undefined,
+          }
+        } catch {
+          return {
+            index,
+            programId,
+            programLabel: 'Ifx',
+            programShort: 'ifx',
+            isIfx: true,
+            ifxCluster: ifx.cluster,
+            accounts,
+            dataHex: bytesToHex(data, 32),
+            dataLen: data.length,
+            summary: `Ifx · unknown disc · ${data.length} B`,
+          }
         }
-      } catch {
-        return {
-          index,
-          programId,
-          isIfx: true,
-          ifxCluster: ifx.cluster,
-          accounts,
-          dataHex: bytesToHex(data, 32),
-          dataLen: data.length,
-          summary: `Ifx · unknown disc · ${data.length} B`,
-        }
+      }
+      return {
+        index,
+        programId,
+        programLabel: 'Ifx',
+        programShort: 'ifx',
+        isIfx: true,
+        ifxCluster: ifx.cluster,
+        accounts,
+        dataHex: bytesToHex(data, 16),
+        dataLen: data.length,
+        summary: 'Ifx',
+      }
+    }
+
+    const known = identifyKnownInstruction(programId, data)
+    if (known) {
+      return {
+        index,
+        programId,
+        programLabel: known.program.label,
+        programShort: known.program.short,
+        ixLabel: known.label,
+        ixName: known.name,
+        isIfx: false,
+        accounts,
+        dataHex: bytesToHex(data, 24),
+        dataLen: data.length,
+        summary: known.summary,
+        known,
       }
     }
 
