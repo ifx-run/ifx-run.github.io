@@ -483,7 +483,7 @@ textarea {
 .ingress-preview-wire {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.2rem;
   width: 100%;
   min-width: 0;
   font-size: 0.82rem;
@@ -495,14 +495,17 @@ textarea {
   color: var(--text);
 }
 .ingress-preview-mid {
-  flex: 1 1 auto;
-  min-width: 2rem;
+  flex: 1 1 0%;
+  min-width: 2.5rem;
   overflow: hidden;
   white-space: nowrap;
-  letter-spacing: 0.02em;
   color: var(--muted);
-  opacity: 0.75;
+  opacity: 0.8;
   user-select: none;
+  letter-spacing: 0.08em;
+}
+.ingress-preview-mid::before {
+  content: '…………………………………………………………………………………………………………';
 }
 
 .field-label {
