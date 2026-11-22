@@ -17,7 +17,7 @@
   --focus: #6ec9ff;
   --radius: 6px;
   --font: 'IBM Plex Sans', 'Segoe UI', sans-serif;
-  --font-display: 'Syne', 'IBM Plex Sans', sans-serif;
+  --font-display: 'Sora', 'IBM Plex Sans', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   color-scheme: dark;
 }
@@ -123,9 +123,9 @@ textarea {
   padding: 1.25rem 1.25rem 2.5rem;
 }
 
-/* —— Home: editorial ink slab —— */
+/* —— Home: quiet gallery / outline wordmark —— */
 .shell-home {
-  background: var(--bg);
+  background: #0b0c0e;
 }
 
 .shell-home .topbar {
@@ -138,22 +138,22 @@ textarea {
 }
 
 .shell-home .topbar-nav a {
-  color: color-mix(in srgb, var(--paper) 72%, transparent);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
 }
 .shell-home .topbar-nav a:hover,
 .shell-home .topbar-nav a.active {
-  color: var(--paper);
+  color: var(--text);
 }
 .shell-home .topbar-nav a.active {
   box-shadow: inset 0 -1px 0 var(--accent);
 }
 .shell-home .ghost {
-  border-color: color-mix(in srgb, var(--paper) 28%, transparent);
-  color: color-mix(in srgb, var(--paper) 72%, transparent);
+  border-color: color-mix(in srgb, var(--text) 22%, transparent);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
 }
 .shell-home .ghost:hover {
-  color: var(--paper);
-  border-color: color-mix(in srgb, var(--paper) 55%, transparent);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 45%, transparent);
 }
 
 .main-home {
@@ -164,118 +164,116 @@ textarea {
 }
 
 .home {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(9rem, 34vw) minmax(0, 1fr);
-}
-
-.home-slab {
   position: relative;
-  background: var(--ink);
-  overflow: hidden;
-  /* intentional hard edge — flat ink, not a soft glow */
-  border-right: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
 }
 
-.home-slab-marks {
+.home-canvas {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  padding: 18vh 0;
-  font-family: var(--mono);
-  font-size: clamp(2.4rem, 6vw, 4.5rem);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  color: color-mix(in srgb, var(--accent) 22%, transparent);
-  user-select: none;
+  z-index: 0;
   pointer-events: none;
-}
-.home-slab-marks span {
-  display: block;
-  padding-left: 8%;
-  white-space: nowrap;
-  animation: home-mark-in 0.9s ease both;
-}
-.home-slab-marks span:nth-child(2) {
-  animation-delay: 0.08s;
-}
-.home-slab-marks span:nth-child(3) {
-  animation-delay: 0.16s;
-}
-.home-slab-marks span:nth-child(4) {
-  animation-delay: 0.24s;
+  overflow: hidden;
 }
 
-@keyframes home-mark-in {
-  from {
-    opacity: 0;
-    transform: translateX(-0.6rem);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.home-dotgrid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.45;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--accent) 28%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 38%, #000 20%, transparent 75%);
 }
 
-.home-copy {
+.home-horizon {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 58%;
+  height: 1px;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.home-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: clamp(5.5rem, 12vh, 7rem) clamp(1.4rem, 5vw, 4rem)
-    clamp(2rem, 6vh, 3.5rem);
-  max-width: 38rem;
-  animation: home-copy-in 0.7s ease 0.12s both;
+  padding: 5.5rem 1.25rem 1rem;
+  min-height: 52vh;
 }
 
-@keyframes home-copy-in {
+.home-brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(5.5rem, 22vw, 13rem);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--accent) 88%, white);
+  text-stroke: 1.5px color-mix(in srgb, var(--accent) 88%, white);
+  animation: home-brand-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes home-brand-in {
   from {
     opacity: 0;
-    transform: translateY(0.5rem);
+    letter-spacing: 0.12em;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    letter-spacing: -0.06em;
+    transform: none;
+  }
+}
+
+.home-dock {
+  position: relative;
+  z-index: 1;
+  padding: 0 clamp(1.25rem, 5vw, 3rem) clamp(1.75rem, 4vh, 2.75rem);
+  animation: home-dock-in 0.8s ease 0.15s both;
+}
+
+@keyframes home-dock-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
   }
   to {
     opacity: 1;
     transform: none;
   }
+}
+
+.home-dock-inner {
+  max-width: 36rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .home-kicker {
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   font-family: var(--mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
-.home-brand {
-  margin: 0 0 1.35rem;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(4.2rem, 14vw, 7.2rem);
-  line-height: 0.88;
-  letter-spacing: -0.05em;
-}
-
-.home-brand-ink {
-  display: inline-block;
-  color: var(--paper);
-  /* brand straddles the ink slab: half pulls left into the field */
-  margin-left: clamp(-4.5rem, -9vw, -2rem);
-  padding: 0.08em 0.12em 0.1em 0;
-  background: linear-gradient(
-    90deg,
-    var(--ink) 0%,
-    var(--ink) 42%,
-    transparent 42%
-  );
-}
-
 .home-headline {
-  margin: 0 0 0.85rem;
-  font-size: clamp(1.12rem, 2.2vw, 1.38rem);
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.05rem, 2vw, 1.28rem);
   font-weight: 500;
   line-height: 1.4;
   color: var(--text);
@@ -283,8 +281,8 @@ textarea {
 }
 
 .home-support {
-  margin: 0 0 2rem;
-  font-size: 0.95rem;
+  margin: 0 0 1.5rem;
+  font-size: 0.92rem;
   line-height: 1.55;
   color: var(--muted);
   text-wrap: pretty;
@@ -294,7 +292,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.85rem 1.25rem;
+  gap: 0.85rem 1.35rem;
 }
 
 .cta {
@@ -303,39 +301,41 @@ textarea {
   justify-content: center;
   gap: 0.45rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   text-decoration: none;
-  border-radius: 0;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  border-radius: 999px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 .cta:hover {
   text-decoration: none;
 }
 
 .cta-primary {
-  min-width: 10rem;
-  padding: 0.9rem 1.4rem;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--paper);
+  min-width: 9.5rem;
+  padding: 0.72rem 1.35rem;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .cta-primary:hover {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
   border-color: var(--accent);
-  color: var(--ink);
+  color: var(--text);
 }
 
 .cta-secondary {
-  padding: 0.55rem 0;
+  padding: 0.45rem 0.1rem;
   background: transparent;
-  color: var(--text);
+  color: var(--muted);
   border: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
   border-radius: 0;
 }
 .cta-secondary:hover {
   color: var(--accent);
-  border-bottom-color: var(--accent);
 }
 .cta-arrow {
   font-family: var(--mono);
@@ -346,13 +346,13 @@ textarea {
 }
 
 .home-foot {
-  margin: 2.4rem 0 0;
+  margin: 1.75rem 0 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem;
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .home-foot a {
@@ -367,26 +367,16 @@ textarea {
   background: var(--line);
 }
 
-@media (max-width: 760px) {
-  .home {
-    grid-template-columns: 1fr;
-    grid-template-rows: 7.5rem 1fr;
+@media (max-width: 640px) {
+  .home-stage {
+    min-height: 42vh;
+    padding-top: 5rem;
   }
-  .home-slab-marks {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: flex-start;
-    gap: 1rem;
-    padding: 0 1.1rem 1rem;
-    font-size: 1.35rem;
+  .home-brand {
+    -webkit-text-stroke-width: 1.15px;
   }
-  .home-brand-ink {
-    margin-left: 0;
-    background: none;
-    color: var(--text);
-  }
-  .home-copy {
-    padding-top: 1.75rem;
+  .home-horizon {
+    top: 48%;
   }
 }
 
