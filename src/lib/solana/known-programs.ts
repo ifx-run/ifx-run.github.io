@@ -5,9 +5,9 @@
 
 export type KnownProgram = {
   id: string
-  /** Short id for timeline (system, token, …). */
+  /** Internal slug (system, token, …). */
   short: string
-  /** Display name (System Program, …). */
+  /** List / detail display name without trailing "Program". */
   label: string
 }
 
@@ -27,7 +27,7 @@ const PROGRAMS = {
   system: {
     id: '11111111111111111111111111111111',
     short: 'system',
-    label: 'System Program',
+    label: 'System',
   },
   computeBudget: {
     id: 'ComputeBudget111111111111111111111111111111',
@@ -37,7 +37,7 @@ const PROGRAMS = {
   token: {
     id: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
     short: 'token',
-    label: 'SPL Token',
+    label: 'Token',
   },
   token2022: {
     id: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
@@ -47,17 +47,17 @@ const PROGRAMS = {
   ata: {
     id: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
     short: 'ata',
-    label: 'Associated Token Account',
+    label: 'Associated Token',
   },
   stake: {
     id: 'Stake11111111111111111111111111111111111111',
     short: 'stake',
-    label: 'Stake Program',
+    label: 'Stake',
   },
   vote: {
     id: 'Vote111111111111111111111111111111111111111',
     short: 'vote',
-    label: 'Vote Program',
+    label: 'Vote',
   },
   alt: {
     id: 'AddressLookupTab1e1111111111111111111111111',
@@ -87,7 +87,7 @@ const PROGRAMS = {
   config: {
     id: 'Config1111111111111111111111111111111111111',
     short: 'config',
-    label: 'Config Program',
+    label: 'Config',
   },
   secp256k1: {
     id: 'KeccakSecp256k11111111111111111111111111111',
@@ -281,7 +281,7 @@ function decodeTokenFamily(
   const label = TOKEN_IX[tag]
   if (!label) {
     return ix(program, `ix_${tag}`, `Instruction ${tag}`, {
-      summary: `${program.short} · ix ${tag}`,
+      summary: `${program.label} · ix ${tag}`,
     })
   }
   const name = label
@@ -369,7 +369,7 @@ function decodeU32Program(
   const entry = table[tag]
   if (!entry) {
     return ix(program, `ix_${tag}`, `Instruction ${tag}`, {
-      summary: `${program.short} · ix ${tag}`,
+      summary: `${program.label} · ix ${tag}`,
     })
   }
   const [name, label] = entry
@@ -455,7 +455,7 @@ export function identifyKnownInstruction(
     program.id === PROGRAMS.loaderV3.id
   ) {
     return ix(program, 'instruction', 'Instruction', {
-      summary: `${program.short} · ${data.length} B`,
+      summary: `${program.label} · ${data.length} B`,
     })
   }
 
