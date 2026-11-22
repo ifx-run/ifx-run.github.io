@@ -1,16 +1,12 @@
 import {
   useCallback,
-  useEffect,
   useId,
-  useRef,
   useState,
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { SAMPLE_TXS } from '../lib/samples'
-import { fetchAndExploreTransaction, RpcExploreError } from '../lib/solana/fetch-tx'
 import {
   exploreFromWire,
   type ExploredInstruction,
@@ -18,106 +14,49 @@ import {
 } from '../lib/solana/parse-tx'
 import { shortenAddress } from '../lib/solana/bytes'
 
-function looksLikeSignature(s: string): boolean {
-  const t = s.trim()
-  return /^[1-9A-HJ-NP-Za-km-z]{64,128}$/.test(t)
-}
-
 export function ExplorerWorkspace() {
-  const { t, lang, rpcUrl, setRpcUrl, resetRpcUrl } = useApp()
-  const [params] = useSearchParams()
-  const navigate = useNavigate()
+  const { t } = useApp()
   const inputId = useId()
-  const rpcId = useId()
 
-  const [input, setInput] = useState(() => params.get('tx') ?? '')
-  const [rpcDraft, setRpcDraft] = useState(rpcUrl)
+  const [input, setInput] = useState('')
   const [result, setResult] = useState<ExploredTransaction | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [hint, setHint] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<number | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const lastAutoTx = useRef<string | null>(null)
-
-  useEffect(() => {
-    setRpcDraft(rpcUrl)
-  }, [rpcUrl])
 
   const run = useCallback(
-    async (raw: string, opts?: { fromQuery?: boolean }) => {
+    (raw: string) => {
       const value = raw.trim()
       if (!value) return
 
-      abortRef.current?.abort()
-      const ac = new AbortController()
-      abortRef.current = ac
-
-      setLoading(true)
       setError(null)
-      setHint(null)
       setSelected(null)
 
       try {
-        let explored: ExploredTransaction
-        if (looksLikeSignature(value)) {
-          explored = await fetchAndExploreTransaction(value, rpcUrl, ac.signal)
-          if (!opts?.fromQuery) {
-            navigate(`/explorer?tx=${encodeURIComponent(value)}`, {
-              replace: true,
-            })
-          }
-        } else {
-          explored = exploreFromWire(value)
-          if (!opts?.fromQuery) {
-            navigate('/explorer', { replace: true })
-          }
-        }
-        if (!ac.signal.aborted) {
-          setResult(explored)
-          const firstIfx = explored.instructions.findIndex((i) => i.isIfx)
-          setSelected(firstIfx >= 0 ? firstIfx : 0)
-        }
+        const explored = exploreFromWire(value)
+        setResult(explored)
+        const firstIfx = explored.instructions.findIndex((i) => i.isIfx)
+        setSelected(firstIfx >= 0 ? firstIfx : 0)
       } catch (e) {
-        if (ac.signal.aborted) return
         setResult(null)
-        if (e instanceof RpcExploreError) {
+        if (e instanceof Error) {
           setError(e.message)
-          if (e.kind === 'rpc' || e.kind === 'not_found') setHint(t.tryRpc)
-          if (e.kind === 'decode' || e.kind === 'not_found') {
-            setHint((h) => (h ? `${h} ${t.tryWire}` : t.tryWire))
-          }
-        } else if (e instanceof Error) {
-          setError(e.message)
-          setHint(t.tryWire)
         } else {
           setError(t.errorGeneric)
         }
-      } finally {
-        if (!ac.signal.aborted) setLoading(false)
       }
     },
-    [navigate, rpcUrl, t],
+    [t],
   )
-
-  // Deep-link via ?tx=
-  useEffect(() => {
-    const tx = params.get('tx')
-    if (!tx || tx === lastAutoTx.current) return
-    lastAutoTx.current = tx
-    setInput(tx)
-    void run(tx, { fromQuery: true })
-  }, [params, run])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    void run(input)
+    run(input)
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault()
-      void run(input)
+      run(input)
     }
   }
 
@@ -130,70 +69,30 @@ export function ExplorerWorkspace() {
         <textarea
           id={inputId}
           className="ingress-input"
-          rows={3}
+          rows={5}
           spellCheck={false}
           placeholder={t.inputPlaceholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          disabled={loading}
         />
         <div className="ingress-actions">
-          <button type="submit" className="primary" disabled={loading || !input.trim()}>
-            {loading ? t.loading : t.load}
+          <button type="submit" className="primary" disabled={!input.trim()}>
+            {t.load}
           </button>
           <span className="kbd-hint">⌘/Ctrl + Enter</span>
         </div>
-
-        <div className="rpc-row">
-          <label htmlFor={rpcId}>{t.rpcLabel}</label>
-          <input
-            id={rpcId}
-            className="rpc-input"
-            value={rpcDraft}
-            onChange={(e) => setRpcDraft(e.target.value)}
-            spellCheck={false}
-          />
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => setRpcUrl(rpcDraft)}
-          >
-            {t.rpcSave}
-          </button>
-          <button type="button" className="ghost" onClick={resetRpcUrl}>
-            {t.rpcReset}
-          </button>
-        </div>
-
-        <div className="samples">
-          <span className="samples-label">{t.samples}</span>
-          {SAMPLE_TXS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="sample-chip"
-              onClick={() => {
-                setInput(s.signature)
-                void run(s.signature)
-              }}
-            >
-              {lang === 'zh' ? s.labelZh : s.labelEn}
-            </button>
-          ))}
-        </div>
+        <p className="offline-note">{t.offlineNote}</p>
       </form>
 
       {error && (
         <div className="banner error" role="alert">
           <p>{error}</p>
-          {hint && <p className="banner-hint">{hint}</p>}
+          <p className="banner-hint">{t.tryWire}</p>
         </div>
       )}
 
-      {!result && !error && !loading && (
-        <EmptyState />
-      )}
+      {!result && !error && <EmptyState />}
 
       {result && (
         <div className="result-grid">
@@ -202,13 +101,9 @@ export function ExplorerWorkspace() {
             instructions={result.instructions}
             selected={selected}
             onSelect={setSelected}
-            signature={result.signature}
           />
           {selected !== null && result.instructions[selected] && (
-            <InstructionDetail
-              ix={result.instructions[selected]!}
-              signature={result.signature}
-            />
+            <InstructionDetail ix={result.instructions[selected]!} />
           )}
           <p className="decoder-note">{result.decoderNote}</p>
         </div>
@@ -241,6 +136,12 @@ function PacketPanel({ result }: { result: ExploredTransaction }) {
           <dt>{t.version}</dt>
           <dd>
             <span className={`ver-pill ver-${version}`}>{version}</span>
+          </dd>
+        </div>
+        <div>
+          <dt>{t.encoding}</dt>
+          <dd>
+            <code>{result.encoding}</code>
           </dd>
         </div>
         <div>
@@ -283,20 +184,6 @@ function PacketPanel({ result }: { result: ExploredTransaction }) {
             </dd>
           </div>
         )}
-        {result.signature && (
-          <div>
-            <dt>sig</dt>
-            <dd>
-              <code className="break">{result.signature}</code>
-            </dd>
-          </div>
-        )}
-        {result.slot != null && (
-          <div>
-            <dt>slot</dt>
-            <dd>{String(result.slot)}</dd>
-          </div>
-        )}
       </dl>
     </section>
   )
@@ -306,29 +193,16 @@ function InstructionTimeline({
   instructions,
   selected,
   onSelect,
-  signature,
 }: {
   instructions: ExploredInstruction[]
   selected: number | null
   onSelect: (i: number) => void
-  signature?: string
 }) {
   const { t } = useApp()
   return (
     <section className="panel timeline-panel">
       <div className="panel-head">
         <h2>{t.instructions}</h2>
-        {signature && (
-          <a
-            className="ext-link"
-            href={`https://solscan.io/tx/${signature}`}
-            target="_blank"
-            rel="noreferrer"
-            title={t.solscanNote}
-          >
-            {t.solscan} ↗
-          </a>
-        )}
       </div>
       <ol className="timeline">
         {instructions.map((ix) => (
@@ -351,18 +225,11 @@ function InstructionTimeline({
           </li>
         ))}
       </ol>
-      {signature && <p className="solscan-note">{t.solscanNote}</p>}
     </section>
   )
 }
 
-function InstructionDetail({
-  ix,
-  signature,
-}: {
-  ix: ExploredInstruction
-  signature?: string
-}) {
+function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
   const { t } = useApp()
   return (
     <section className="panel detail-panel">
@@ -404,15 +271,6 @@ function InstructionDetail({
       <div className="detail-links">
         {ix.docsSlug && (
           <Link to={`/docs/${ix.docsSlug}`}>{t.docs}</Link>
-        )}
-        {signature && (
-          <a
-            href={`https://solscan.io/tx/${signature}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t.solscan}
-          </a>
         )}
       </div>
     </section>

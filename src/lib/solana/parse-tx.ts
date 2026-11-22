@@ -1,6 +1,5 @@
 import {
   decompileTransactionConfig,
-  decodeTransactionFromRpcResponse,
   getCompiledTransactionMessageDecoder,
   getInstructionsFromCompiledTransactionMessage,
   getTransactionDecoder,
@@ -14,7 +13,12 @@ import {
   type IfxIxName,
 } from '../ifx/decode-l0'
 import { identifyIfxProgram, type IfxCluster } from '../ifx/program-ids'
-import { bytesToHex, decodeWireInput, shortenAddress } from './bytes'
+import {
+  bytesToHex,
+  decodeWireCandidates,
+  type WireEncoding,
+  shortenAddress,
+} from './bytes'
 
 export type PacketVersion = 'legacy' | 0 | 1
 
@@ -57,20 +61,11 @@ export type ExploredInstruction = {
 }
 
 export type ExploredTransaction = {
-  source: 'signature' | 'wire'
-  signature?: string
-  slot?: number | bigint | null
-  err?: unknown
+  source: 'wire'
+  encoding: WireEncoding
   packet: PacketMeta
   instructions: ExploredInstruction[]
   decoderNote: string
-}
-
-export type RpcTxEnvelope = {
-  slot: number | bigint
-  transaction: unknown
-  meta: unknown
-  version?: PacketVersion
 }
 
 function versionLabel(v: CompiledTransactionMessage['version']): PacketVersion {
@@ -200,83 +195,43 @@ function mapInstructions(
 }
 
 const DECODER_NOTE =
-  'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 disc map · args L1 TBD'
+  'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 disc map · args L1 TBD · offline wire only'
 
-/** Parse a pasted wire transaction (base64 or hex) entirely in-browser. */
+/** Parse pasted wire (base58 or base64) entirely in-browser — no RPC. */
 export function exploreFromWire(raw: string): ExploredTransaction {
-  const bytes = decodeWireInput(raw)
-  const tx = getTransactionDecoder().decode(bytes)
-  const compiled = getCompiledTransactionMessageDecoder().decode(
-    tx.messageBytes,
-  )
-  const packet = extractPacketMeta(
-    compiled,
-    bytes.byteLength,
-    tx.messageBytes.byteLength,
-  )
-  const instructions = mapInstructions(compiled)
+  const candidates = decodeWireCandidates(raw)
+  let lastError: unknown
 
-  return {
-    source: 'wire',
-    packet,
-    instructions,
-    decoderNote: DECODER_NOTE,
-  }
-}
-
-/** Explore a getTransaction RPC response (encoding base64, maxSupportedTransactionVersion: 1). */
-export function exploreFromRpcResponse(
-  signature: string,
-  rpcTx: RpcTxEnvelope,
-): ExploredTransaction {
-  // Cast: kit overloads distinguish base64 vs json; we always request base64.
-  const decoded = decodeTransactionFromRpcResponse(rpcTx as never) as unknown as {
-    compiledMessage: CompiledTransactionMessage
-    loadedAddresses: {
-      writable: readonly Address[]
-      readonly: readonly Address[]
-    }
-    transaction?: {
-      messageBytes: { byteLength: number }
-      signatures: Record<string, unknown>
-    }
-  }
-
-  let actualWire = 0
-  const tuple = (rpcTx as { transaction?: [string, string] }).transaction
-  if (Array.isArray(tuple) && typeof tuple[0] === 'string') {
+  for (const { bytes, encoding } of candidates) {
     try {
-      actualWire = decodeWireInput(tuple[0]).byteLength
-    } catch {
-      /* ignore */
+      const tx = getTransactionDecoder().decode(bytes)
+      const compiled = getCompiledTransactionMessageDecoder().decode(
+        tx.messageBytes,
+      )
+      const packet = extractPacketMeta(
+        compiled,
+        bytes.byteLength,
+        tx.messageBytes.byteLength,
+      )
+      const instructions = mapInstructions(compiled)
+
+      return {
+        source: 'wire',
+        encoding,
+        packet,
+        instructions,
+        decoderNote: DECODER_NOTE,
+      }
+    } catch (e) {
+      lastError = e
     }
   }
-  if (!actualWire && decoded.transaction) {
-    // Approximate: compact-u16 sig count + 64×sigs + message (good enough for UI)
-    const sigCount = Object.keys(decoded.transaction.signatures).length
-    actualWire =
-      1 + sigCount * 64 + decoded.transaction.messageBytes.byteLength
-  }
 
-  const packet = extractPacketMeta(
-    decoded.compiledMessage,
-    actualWire,
-    decoded.transaction?.messageBytes.byteLength ?? 0,
+  const detail =
+    lastError instanceof Error ? lastError.message : String(lastError ?? '')
+  throw new Error(
+    detail
+      ? `could not decode as a Solana transaction (${detail})`
+      : 'could not decode as a Solana transaction',
   )
-  const instructions = mapInstructions(
-    decoded.compiledMessage,
-    decoded.loadedAddresses,
-  )
-
-  const meta = rpcTx.meta as { err?: unknown } | null | undefined
-
-  return {
-    source: 'signature',
-    signature,
-    slot: rpcTx.slot,
-    err: meta?.err ?? null,
-    packet,
-    instructions,
-    decoderNote: DECODER_NOTE,
-  }
 }

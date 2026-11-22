@@ -1,8 +1,8 @@
 {
   "repo": "ifx-run/ifx",
-  "ref": "3e863259dea307025a40f27e64d0b6b8a390adcf",
-  "sha": "3e863259dea307025a40f27e64d0b6b8a390adcf",
-  "syncedAt": "2026-11-22T10:26:47.734Z",
+  "ref": "ebbb5eb979369be8b53ad8dc02915d8e94b08a34",
+  "sha": "ebbb5eb979369be8b53ad8dc02915d8e94b08a34",
+  "syncedAt": "2026-11-22T12:46:00.000Z",
   "files": [
     "design.md",
     "design.zh-CN.md",
@@ -25,5 +25,5 @@
     "typed-let-bindings.md",
     "typed-let-bindings.zh-CN.md"
   ],
-  "githubTreeUrl": "https://github.com/ifx-run/ifx/tree/3e863259dea307025a40f27e64d0b6b8a390adcf/docs"
+  "githubTreeUrl": "https://github.com/ifx-run/ifx/tree/ebbb5eb979369be8b53ad8dc02915d8e94b08a34/docs"
 }

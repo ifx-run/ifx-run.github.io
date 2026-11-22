@@ -1,28 +1,64 @@
-/** Detect and decode pasted wire (base64 or hex) into raw bytes. */
-export function decodeWireInput(raw: string): Uint8Array {
-  const s = raw.trim().replace(/\s+/g, '')
-  if (!s) throw new Error('empty wire')
+import { getBase58Encoder, getBase64Encoder } from '@solana/kit'
 
-  if (/^[0-9a-fA-F]+$/.test(s) && s.length % 2 === 0) {
-    const out = new Uint8Array(s.length / 2)
-    for (let i = 0; i < out.length; i++) {
-      out[i] = Number.parseInt(s.slice(i * 2, i * 2 + 2), 16)
-    }
-    return out
-  }
+export type WireEncoding = 'base58' | 'base64'
 
-  // base64 / base64url
+const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]+$/
+const BASE64_RE = /^[A-Za-z0-9+/_-]+={0,2}$/
+
+function normalizeBase64(s: string): string {
   let b64 = s.replace(/-/g, '+').replace(/_/g, '/')
   const pad = b64.length % 4
   if (pad) b64 += '='.repeat(4 - pad)
-  try {
-    const bin = atob(b64)
-    const out = new Uint8Array(bin.length)
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
-    return out
-  } catch {
-    throw new Error('not valid base64 or hex')
+  return b64
+}
+
+function decodeBase58(s: string): Uint8Array {
+  if (!BASE58_RE.test(s)) throw new Error('invalid base58 alphabet')
+  return new Uint8Array(getBase58Encoder().encode(s))
+}
+
+function decodeBase64(s: string): Uint8Array {
+  if (!BASE64_RE.test(s)) throw new Error('invalid base64 alphabet')
+  return new Uint8Array(getBase64Encoder().encode(normalizeBase64(s)))
+}
+
+/**
+ * Decode pasted transaction wire as base58 or base64 (no network).
+ * Returns candidates ordered by likelihood; caller should try tx decode on each.
+ */
+export function decodeWireCandidates(
+  raw: string,
+): { bytes: Uint8Array; encoding: WireEncoding }[] {
+  const s = raw.trim().replace(/\s+/g, '')
+  if (!s) throw new Error('empty wire')
+
+  const looksB64 = /[+/=_-]/.test(s)
+  const order: WireEncoding[] = looksB64
+    ? ['base64', 'base58']
+    : ['base58', 'base64']
+
+  const out: { bytes: Uint8Array; encoding: WireEncoding }[] = []
+  for (const encoding of order) {
+    try {
+      const bytes =
+        encoding === 'base58' ? decodeBase58(s) : decodeBase64(s)
+      if (bytes.byteLength > 0) out.push({ bytes, encoding })
+    } catch {
+      /* try next */
+    }
   }
+  if (out.length === 0) {
+    throw new Error('not valid base58 or base64 wire')
+  }
+  return out
+}
+
+/** Decode pasted wire; prefers the first successful encoding guess. */
+export function decodeWireInput(raw: string): {
+  bytes: Uint8Array
+  encoding: WireEncoding
+} {
+  return decodeWireCandidates(raw)[0]!
 }
 
 export function bytesToHex(bytes: Uint8Array, max = 24): string {

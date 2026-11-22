@@ -1,15 +1,8 @@
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 
 export function HomePage() {
   const { t } = useApp()
-  const [params] = useSearchParams()
-  const tx = params.get('tx')
-  if (tx) {
-    return (
-      <Navigate to={`/explorer?tx=${encodeURIComponent(tx)}`} replace />
-    )
-  }
 
   return (
     <section className="home">

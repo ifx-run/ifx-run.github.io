@@ -443,8 +443,7 @@ textarea {
   letter-spacing: 0.06em;
 }
 
-.ingress-input,
-.rpc-input {
+.ingress-input {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--line);
@@ -455,8 +454,7 @@ textarea {
   font-size: 0.9rem;
   resize: vertical;
 }
-.ingress-input:focus,
-.rpc-input:focus {
+.ingress-input:focus {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
@@ -503,46 +501,10 @@ textarea {
   font-family: var(--mono);
 }
 
-.rpc-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
-}
-.rpc-row label {
+.offline-note {
+  margin: 0.35rem 0 0;
   font-size: 0.8rem;
   color: var(--muted);
-}
-.rpc-row .rpc-input {
-  flex: 1 1 220px;
-  min-width: 0;
-}
-
-.samples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  align-items: center;
-  margin-top: 0.25rem;
-}
-.samples-label {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-right: 0.25rem;
-}
-.sample-chip {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-.sample-chip:hover {
-  border-color: var(--accent-dim);
-  color: var(--accent);
 }
 
 .banner {
@@ -723,7 +685,6 @@ textarea {
   white-space: nowrap;
 }
 
-.solscan-note,
 .decoder-note,
 .muted {
   color: var(--muted);

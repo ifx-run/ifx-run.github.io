@@ -28,37 +28,21 @@ npm run build
 npm run preview
 ```
 
-Optional RPC default (otherwise `https://api.mainnet-beta.solana.com`, overridable in the UI / localStorage):
-
-```bash
-export VITE_SOLANA_RPC_URL=https://your-rpc.example
-npm run dev
-```
-
-No secrets are required. Do not commit API keys.
+No secrets or RPC endpoints are required. The explorer never calls the network.
 
 ## Explorer (MVP)
 
-Inputs (equal citizens):
-
-1. **Transaction signature** → RPC `getTransaction` with `maxSupportedTransactionVersion: 1` (SIMD-0385 **v1**)
-2. **Wire paste** → base64 / hex, decoded entirely in the browser (`@solana/kit`)
+**Offline wire only.** Paste the full transaction bytes as **base58** or **base64**. There is no signature lookup and no RPC.
 
 Outputs:
 
-- Packet meta: legacy / v0 / **v1**, approximate wire size, ALT (if any), v1 header (CU limit, loaded-accounts-data-size, …)
+- Packet meta: legacy / v0 / **v1**, wire size, ALT (if any), v1 header (CU limit, loaded-accounts-data-size, …)
 - Instruction timeline: non-Ifx dimmed; Ifx highlighted
 - **L0** Ifx decode: programId (mainnet / devnet / localnet) + 1-byte discriminator → name (`create` / `let` / `assert` / …)
 
-Decoder stack: `@solana/kit` ≥ 8 (v1-capable) + local L0 disc map aligned with `@ifx-run/sdk` `decodeIfxInstruction`. **L1 args / L2 SSA / L3 logs** are planned next — not in MVP.
+Decoder stack: `@solana/kit` (SIMD-0385 v1-capable) + local L0 disc map aligned with `@ifx-run/sdk` `decodeIfxInstruction`. **L1 args / L2 SSA / L3 logs** are planned next — not in MVP.
 
-Known limits:
-
-- Public RPCs may rate-limit or lack full v1 support; change RPC in the UI or paste wire.
-- Solscan (and many explorers) still mis-render Ifx / v1 — that is why this site exists.
-- This site is **read-only** (parse / display). It does not upgrade packets to v1 or compose transactions.
-
-Sample mainnet v1 signatures (from the main-repo README) are one-click loadable in the UI.
+This site is **read-only** (parse / display). It does not fetch chain state, upgrade packets to v1, or compose / send transactions.
 
 ## Docs sync
 
@@ -133,9 +117,9 @@ public/CNAME
 
 ## Roadmap (site)
 
-1. **MVP (this)** — GH Pages + CNAME; wire/sig → Ifx L0 highlight; v0+v1 ingest; docs sync render
-2. **Usable** — L1 args pretty-print + docs deep links + RPC config (RPC already in UI)
-3. **Enhanced** — L2 binding cross-refs; L3 logs / if_else arm; richer samples
+1. **MVP (this)** — GH Pages + CNAME; offline base58/base64 wire → Ifx L0 highlight; v0+v1; docs sync render
+2. **Usable** — L1 args pretty-print + richer docs deep links
+3. **Enhanced** — L2 binding cross-refs; L3 logs / if_else arm; local wire samples
 
 ## License
 
