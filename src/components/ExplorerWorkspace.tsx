@@ -65,11 +65,12 @@ export function ExplorerWorkspace() {
   const [error, setError] = useState<string | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(false)
-  /** Expanded paste box; collapses on outside click once decode succeeds. */
+  /** Collapses on successful decode; outside click also collapses when result exists. */
   const [ingressExpanded, setIngressExpanded] = useState(true)
 
   const applyResult = useCallback((explored: ExploredTransaction) => {
     setResult(explored)
+    setIngressExpanded(false)
   }, [])
 
   const clearResult = useCallback(() => {
