@@ -5,17 +5,26 @@ import {
   getBase64Encoder,
 } from '@solana/kit'
 
-export type WireEncoding = 'base58' | 'base64'
+export type WireEncoding = 'hex' | 'base58' | 'base64'
 export type DataEncoding = 'hex' | 'base58' | 'base64'
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]+$/
 const BASE64_RE = /^[A-Za-z0-9+/_-]+={0,2}$/
+const HEX_BODY_RE = /^[0-9a-fA-F]+$/
 
 function normalizeBase64(s: string): string {
   let b64 = s.replace(/-/g, '+').replace(/_/g, '/')
   const pad = b64.length % 4
   if (pad) b64 += '='.repeat(4 - pad)
   return b64
+}
+
+function normalizeHex(s: string): string {
+  const body = s.startsWith('0x') || s.startsWith('0X') ? s.slice(2) : s
+  if (!HEX_BODY_RE.test(body) || body.length === 0 || body.length % 2 !== 0) {
+    throw new Error('invalid hex')
+  }
+  return body.toLowerCase()
 }
 
 function decodeBase58(s: string): Uint8Array {
@@ -28,8 +37,23 @@ function decodeBase64(s: string): Uint8Array {
   return new Uint8Array(getBase64Encoder().encode(normalizeBase64(s)))
 }
 
+function decodeHex(s: string): Uint8Array {
+  const hex = normalizeHex(s)
+  const out = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < out.length; i++) {
+    out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  }
+  return out
+}
+
+function decodeWireBytes(s: string, encoding: WireEncoding): Uint8Array {
+  if (encoding === 'hex') return decodeHex(s)
+  if (encoding === 'base58') return decodeBase58(s)
+  return decodeBase64(s)
+}
+
 /**
- * Decode pasted transaction wire as base58 or base64 (no network).
+ * Decode pasted transaction wire as hex, base58, or base64 (no network).
  * Returns candidates ordered by likelihood; caller should try tx decode on each.
  */
 export function decodeWireCandidates(
@@ -38,23 +62,32 @@ export function decodeWireCandidates(
   const s = raw.trim().replace(/\s+/g, '')
   if (!s) throw new Error('empty wire')
 
+  const looksHex = (() => {
+    try {
+      normalizeHex(s)
+      return true
+    } catch {
+      return false
+    }
+  })()
   const looksB64 = /[+/=_-]/.test(s)
-  const order: WireEncoding[] = looksB64
-    ? ['base64', 'base58']
-    : ['base58', 'base64']
+
+  let order: WireEncoding[]
+  if (looksHex) order = ['hex', 'base58', 'base64']
+  else if (looksB64) order = ['base64', 'base58', 'hex']
+  else order = ['base58', 'base64', 'hex']
 
   const out: { bytes: Uint8Array; encoding: WireEncoding }[] = []
   for (const encoding of order) {
     try {
-      const bytes =
-        encoding === 'base58' ? decodeBase58(s) : decodeBase64(s)
+      const bytes = decodeWireBytes(s, encoding)
       if (bytes.byteLength > 0) out.push({ bytes, encoding })
     } catch {
       /* try next */
     }
   }
   if (out.length === 0) {
-    throw new Error('not valid base58 or base64 wire')
+    throw new Error('not valid hex, base58, or base64 wire')
   }
   return out
 }

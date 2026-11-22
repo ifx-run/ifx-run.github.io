@@ -397,7 +397,7 @@ function buildExplored(
   }
 }
 
-/** Parse pasted wire (base58 or base64). No network — ALT txs return needsAltRpc. */
+/** Parse pasted wire (hex / base58 / base64). No network — ALT txs return needsAltRpc. */
 export function exploreFromWire(raw: string): ExploredTransaction {
   const decoded = decodeWireToCompiled(raw)
   const { altCount } = extractLookups(decoded.compiled)

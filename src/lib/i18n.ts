@@ -25,13 +25,14 @@ export const copy = {
     homeHeadline:
       'Read, branch, and CPI inside one transaction — without a new wrapper program each time.',
     homeSupport:
-      'Paste transaction wire (base58 / base64) and decode Ifx + SIMD-0385 v1 offline. No RPC. Read the design when you build.',
+      'Paste transaction wire (hex / base58 / base64) and decode Ifx + SIMD-0385 v1 offline. No RPC. Read the design when you build.',
     ctaExplorer: 'Open Explorer',
     ctaDocs: 'Read the docs',
     tagline:
       'On-chain Solana orchestration — explore Ifx instructions offline from wire bytes.',
     inputLabel: 'Transaction wire',
-    inputPlaceholder: 'Paste base58 or base64 wire (legacy / v0 / v1). No network.',
+    inputPlaceholder:
+      'Paste hex / base58 / base64 wire (legacy / v0 / v1). No network.',
     load: 'Decode',
     clear: 'Clear',
     expandIngress: 'Expand',
@@ -43,7 +44,7 @@ export const copy = {
     encoding: 'Encoding',
     emptyTitle: 'Paste wire bytes',
     emptyBody:
-      'Base58 or base64 of the full transaction. Non-Ifx instructions stay dimmed; Ifx is highlighted (L0: program + discriminator).',
+      'Hex, base58, or base64 of the full transaction. Non-Ifx instructions stay dimmed; Ifx is highlighted (L0: program + discriminator).',
     links: 'Links',
     github: 'GitHub',
     npm: 'npm SDK',
@@ -86,7 +87,8 @@ export const copy = {
     dataEncoding: 'Encoding',
     docs: 'Docs',
     errorGeneric: 'Something went wrong.',
-    tryWire: 'Check that the paste is full transaction wire in base58 or base64.',
+    tryWire:
+      'Check that the paste is full transaction wire in hex, base58, or base64.',
     noDocs: 'No docs synced yet. Run npm run sync:docs.',
     docsFootnote: (sha: string) => `docs @ ${sha.slice(0, 7)}`,
     langToggle: '中文',
@@ -123,13 +125,13 @@ export const copy = {
     homeHeadline:
       '同一笔交易里读状态、分支、CPI——不必为每种胶水逻辑再部署一个 wrapper program。',
     homeSupport:
-      '粘贴交易序列化数据（base58 / base64），离线解码 Ifx 与 SIMD-0385 v1。默认不访问 RPC。动手前先读设计文档。',
+      '粘贴交易序列化数据（hex / base58 / base64），离线解码 Ifx 与 SIMD-0385 v1。默认不访问 RPC。动手前先读设计文档。',
     ctaExplorer: '打开浏览器',
     ctaDocs: '阅读文档',
     tagline: 'Solana 链上编排 — 离线解析交易数据中的 Ifx 指令。',
     inputLabel: '交易数据',
     inputPlaceholder:
-      '粘贴整笔交易的序列化数据（base58 或 base64；legacy / v0 / v1）。默认不访问网络。',
+      '粘贴整笔交易的序列化数据（hex / base58 / base64；legacy / v0 / v1）。默认不访问网络。',
     load: '解码',
     clear: '清空',
     expandIngress: '展开',
@@ -141,7 +143,7 @@ export const copy = {
     encoding: '编码',
     emptyTitle: '粘贴交易数据',
     emptyBody:
-      '把整笔交易的序列化字节以 base58 或 base64 贴进来即可。非 Ifx 指令灰显；Ifx 高亮（L0：program + discriminator）。',
+      '把整笔交易的序列化字节以 hex、base58 或 base64 贴进来即可。非 Ifx 指令灰显；Ifx 高亮（L0：program + discriminator）。',
     links: '链接',
     github: 'GitHub',
     npm: 'npm SDK',
@@ -183,7 +185,7 @@ export const copy = {
     dataEncoding: '编码',
     docs: '文档',
     errorGeneric: '出错了。',
-    tryWire: '请确认粘贴的是完整交易序列化数据，且为 base58 或 base64。',
+    tryWire: '请确认粘贴的是完整交易序列化数据，且为 hex、base58 或 base64。',
     noDocs: '尚未同步文档。请运行 npm run sync:docs。',
     docsFootnote: (sha: string) => `docs @ ${sha.slice(0, 7)}`,
     langToggle: 'EN',
