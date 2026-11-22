@@ -248,7 +248,7 @@ export function ExplorerWorkspace() {
               <code className="ingress-preview-wire" aria-label={t.inputLabel}>
                 <span className="ingress-preview-head">{wirePreviewHead}</span>
                 <span className="ingress-preview-mid" aria-hidden>
-                  {'·'.repeat(120)}
+                  {'…'.repeat(80)}
                 </span>
                 {wirePreviewTail ? (
                   <span className="ingress-preview-tail">{wirePreviewTail}</span>
