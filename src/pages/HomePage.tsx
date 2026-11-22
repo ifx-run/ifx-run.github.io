@@ -16,11 +16,13 @@ export function HomePage() {
           <img
             className="home-brand-mark"
             src={`${import.meta.env.BASE_URL}favicon.svg`}
-            alt={t.brand}
+            alt=""
             width={512}
             height={512}
             decoding="async"
+            aria-hidden="true"
           />
+          <span className="home-brand-word">{t.brand}</span>
         </h1>
       </div>
 
