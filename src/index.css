@@ -467,12 +467,29 @@ textarea {
   border-color: var(--muted);
   color: var(--text);
 }
-.ingress-preview code {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ingress-preview-wire {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  min-width: 0;
   font-size: 0.82rem;
+  line-height: 1.35;
+}
+.ingress-preview-head,
+.ingress-preview-tail {
+  flex: 0 0 auto;
+  color: var(--text);
+}
+.ingress-preview-mid {
+  flex: 1 1 auto;
+  min-width: 2rem;
+  overflow: hidden;
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  opacity: 0.75;
+  user-select: none;
 }
 
 .field-label {

@@ -200,10 +200,10 @@ export function ExplorerWorkspace() {
   const hasInput = Boolean(input.trim())
   const canCollapseIngress = Boolean(result)
   const ingressCollapsed = canCollapseIngress && !ingressExpanded
-  const wirePreview =
-    input.trim().length > 72
-      ? `${input.trim().slice(0, 40)}…${input.trim().slice(-24)}`
-      : input.trim()
+  const wireTrimmed = input.trim()
+  const wirePreviewHead = wireTrimmed.slice(0, 14)
+  const wirePreviewTail =
+    wireTrimmed.length > 28 ? wireTrimmed.slice(-14) : ''
 
   return (
     <div className="workspace">
@@ -244,7 +244,19 @@ export function ExplorerWorkspace() {
             title={t.expandIngress}
             onClick={() => setIngressExpanded(true)}
           >
-            <code>{wirePreview || '—'}</code>
+            {wireTrimmed ? (
+              <code className="ingress-preview-wire" aria-label={t.inputLabel}>
+                <span className="ingress-preview-head">{wirePreviewHead}</span>
+                <span className="ingress-preview-mid" aria-hidden>
+                  {'·'.repeat(120)}
+                </span>
+                {wirePreviewTail ? (
+                  <span className="ingress-preview-tail">{wirePreviewTail}</span>
+                ) : null}
+              </code>
+            ) : (
+              <code>—</code>
+            )}
           </button>
         ) : (
           <>
