@@ -12,7 +12,16 @@ export function HomePage() {
       </div>
 
       <div className="home-stage">
-        <h1 className="home-brand">{t.brand}</h1>
+        <h1 className="home-brand">
+          <img
+            className="home-brand-mark"
+            src={`${import.meta.env.BASE_URL}favicon.svg`}
+            alt={t.brand}
+            width={512}
+            height={512}
+            decoding="async"
+          />
+        </h1>
       </div>
 
       <div className="home-dock">
