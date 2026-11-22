@@ -656,6 +656,10 @@ textarea {
   gap: 0.55rem;
   margin: 0 0 0.75rem;
 }
+.frame-strips-actions {
+  display: flex;
+  justify-content: flex-end;
+}
 .frame-strip {
   display: flex;
   flex-direction: column;
@@ -684,21 +688,48 @@ textarea {
 }
 .frame-var {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
+  align-items: stretch;
   max-width: 100%;
-  padding: 0.28rem 0.5rem;
   border-radius: 0.3rem;
   border: 1px solid;
   font-family: var(--mono);
   font-size: 0.72rem;
   font-weight: 600;
   line-height: 1.25;
+  overflow: hidden;
+}
+.frame-var-main {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.28rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
   text-align: left;
 }
-.frame-var:hover {
+.frame-var-main:hover {
   filter: brightness(1.12);
+}
+.frame-var-clear {
+  flex: 0 0 auto;
+  padding: 0 0.4rem;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.frame-var-clear:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 22%, transparent);
 }
 .frame-var-id {
   opacity: 0.85;

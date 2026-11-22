@@ -526,6 +526,10 @@ function InstructionList({
     [focusLine, refIndex],
   )
 
+  const refreshAliases = useCallback(() => {
+    setAliases(getStoredAliases(wireKey))
+  }, [wireKey])
+
   const renameBinding = useCallback(
     (frame: string, index: number) => {
       const key = aliasKey(frame, index)
@@ -533,10 +537,23 @@ function InstructionList({
       const next = window.prompt(t.frameRenamePrompt, current)
       if (next === null) return
       setStoredAlias(wireKey, key, next)
-      setAliases(getStoredAliases(wireKey))
+      refreshAliases()
     },
-    [aliases, t.frameRenamePrompt, wireKey],
+    [aliases, refreshAliases, t.frameRenamePrompt, wireKey],
   )
+
+  const clearBindingName = useCallback(
+    (frame: string, index: number) => {
+      setStoredAlias(wireKey, aliasKey(frame, index), '')
+      refreshAliases()
+    },
+    [refreshAliases, wireKey],
+  )
+
+  const clearAllBindingNames = useCallback(() => {
+    clearStoredAliases(wireKey)
+    refreshAliases()
+  }, [refreshAliases, wireKey])
 
   const labelFor = useCallback(
     (frame: string | undefined, index: number) => {
@@ -545,6 +562,8 @@ function InstructionList({
     },
     [aliases],
   )
+
+  const aliasCount = Object.keys(aliases).length
 
   return (
     <section className="panel timeline-panel">
@@ -563,7 +582,10 @@ function InstructionList({
         <FrameStrips
           frames={frames}
           aliases={aliases}
+          aliasCount={aliasCount}
           onRename={renameBinding}
+          onClearName={clearBindingName}
+          onClearAllNames={clearAllBindingNames}
           onJumpDef={(defIx) => {
             setExpanded((prev) => {
               const next = new Set(prev)
@@ -652,17 +674,34 @@ function InstructionList({
 function FrameStrips({
   frames,
   aliases,
+  aliasCount,
   onRename,
+  onClearName,
+  onClearAllNames,
   onJumpDef,
 }: {
   frames: FrameView[]
   aliases: Record<string, string>
+  aliasCount: number
   onRename: (frame: string, index: number) => void
+  onClearName: (frame: string, index: number) => void
+  onClearAllNames: () => void
   onJumpDef: (defIx: number) => void
 }) {
   const { t } = useApp()
   return (
     <div className="frame-strips">
+      {aliasCount > 0 && (
+        <div className="frame-strips-actions">
+          <button
+            type="button"
+            className="ghost tiny"
+            onClick={onClearAllNames}
+          >
+            {t.frameClearAllNames}
+          </button>
+        </div>
+      )}
       {frames.map((frame) => (
         <div key={frame.address} className="frame-strip">
           <div className="frame-strip-label" title={frame.address}>
@@ -675,9 +714,8 @@ function FrameStrips({
               const name = aliases[key]
               const color = bindingColor(v.index)
               return (
-                <button
+                <div
                   key={v.index}
-                  type="button"
                   role="listitem"
                   className="frame-var"
                   style={{
@@ -685,19 +723,38 @@ function FrameStrips({
                     background: `color-mix(in srgb, ${color} 16%, transparent)`,
                     color,
                   }}
-                  title={`${name ? `${name} · ` : ''}$${v.index} · ${v.ty} · ${v.kind}\n${t.frameRenameTitle}`}
-                  onClick={() => onRename(frame.address, v.index)}
-                  onDoubleClick={(e) => {
-                    e.preventDefault()
-                    onJumpDef(v.defIx)
-                  }}
                 >
-                  <span className="frame-var-id">${v.index}</span>
+                  <button
+                    type="button"
+                    className="frame-var-main"
+                    title={`${name ? `${name} · ` : ''}$${v.index} · ${v.ty} · ${v.kind}\n${t.frameRenameTitle}`}
+                    onClick={() => onRename(frame.address, v.index)}
+                    onDoubleClick={(e) => {
+                      e.preventDefault()
+                      onJumpDef(v.defIx)
+                    }}
+                  >
+                    <span className="frame-var-id">${v.index}</span>
+                    {name ? (
+                      <span className="frame-var-name">{name}</span>
+                    ) : null}
+                    <span className="frame-var-ty">{v.ty}</span>
+                  </button>
                   {name ? (
-                    <span className="frame-var-name">{name}</span>
+                    <button
+                      type="button"
+                      className="frame-var-clear"
+                      title={t.frameClearName}
+                      aria-label={t.frameClearName}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onClearName(frame.address, v.index)
+                      }}
+                    >
+                      ×
+                    </button>
                   ) : null}
-                  <span className="frame-var-ty">{v.ty}</span>
-                </button>
+                </div>
               )
             })}
           </div>

@@ -94,6 +94,8 @@ export const copy = {
     frameStrip: 'Frame',
     frameRenamePrompt: 'Name for this binding (empty = $N)',
     frameRenameTitle: 'Rename binding',
+    frameClearName: 'Clear name',
+    frameClearAllNames: 'Clear all names',
   },
   zh: {
     brand: 'Ifx',
@@ -171,6 +173,8 @@ export const copy = {
     frameStrip: 'Frame',
     frameRenamePrompt: '为该变量命名（留空则恢复 $N）',
     frameRenameTitle: '重命名变量',
+    frameClearName: '清除名称',
+    frameClearAllNames: '清除全部名称',
   },
 } as const
 
