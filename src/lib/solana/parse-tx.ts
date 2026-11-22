@@ -13,6 +13,7 @@ import {
   type IfxIxName,
 } from '../ifx/decode-l0'
 import { tryDecodeIfxL1, type IfxL1View } from '../ifx/decode-l1'
+import { formatL1Lines, formatL1Summary } from '../ifx/format-l1'
 import { identifyIfxProgram, type IfxCluster } from '../ifx/program-ids'
 import {
   parseAccountRole,
@@ -174,6 +175,41 @@ function extractPacketMeta(
   }
 }
 
+/**
+ * Track Frame binding indexes across a transaction:
+ * create/reset → next = 0; each let appends from current next.
+ * Let before any create/reset in this tx → assume $0 + warn.
+ */
+type FrameBindingCursor = {
+  nextIndex: number
+  sawFrameStart: boolean
+}
+
+function applyFrameBindingCursor(
+  l1: IfxL1View,
+  cursor: FrameBindingCursor,
+): IfxL1View {
+  if (l1.args.kind === 'create_frame' || l1.args.kind === 'reset_frame') {
+    cursor.nextIndex = 0
+    cursor.sawFrameStart = true
+    return l1
+  }
+  if (l1.args.kind !== 'let') return l1
+
+  const missingFrameReset = !cursor.sawFrameStart
+  const bindingBase = cursor.nextIndex
+  const opts = { bindingBase }
+  cursor.nextIndex += l1.args.bindings.length
+
+  return {
+    ...l1,
+    bindingBase,
+    missingFrameReset,
+    lines: formatL1Lines(l1.args, opts),
+    summary: formatL1Summary(l1.args, opts),
+  }
+}
+
 function mapInstructions(
   compiled: CompiledTransactionMessage,
   loadedAddresses?: LoadedAddresses | null,
@@ -182,6 +218,11 @@ function mapInstructions(
     compiled,
     loadedAddresses ?? undefined,
   )
+
+  const frameCursor: FrameBindingCursor = {
+    nextIndex: 0,
+    sawFrameStart: false,
+  }
 
   return resolved.map((ix, index) => {
     const programId = String(ix.programAddress)
@@ -199,7 +240,10 @@ function mapInstructions(
       if (data.length > 0) {
         try {
           const decoded = decodeIfxInstruction(data)
-          const l1 = tryDecodeIfxL1(data)
+          const rawL1 = tryDecodeIfxL1(data)
+          const l1 = rawL1
+            ? applyFrameBindingCursor(rawL1, frameCursor)
+            : undefined
           const short = IFX_IX_SHORT[decoded.name]
           return {
             index,
@@ -221,7 +265,7 @@ function mapInstructions(
             summary: l1
               ? `${short} · ${l1.summary}`
               : `${short} · disc ${decoded.discriminator} · ${data.length} B`,
-            l1: l1 ?? undefined,
+            l1,
           }
         } catch {
           return {

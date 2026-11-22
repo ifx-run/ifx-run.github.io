@@ -550,6 +550,11 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       {ix.l1 && (
         <>
           <h3>{t.argsL1}</h3>
+          {ix.l1.missingFrameReset && (
+            <p className="l1-warn" role="status">
+              {t.missingFrameResetWarn}
+            </p>
+          )}
           <ul className="l1-lines">
             {ix.l1.lines.map((line, i) => (
               <li key={i}>

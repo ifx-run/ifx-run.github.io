@@ -82,6 +82,8 @@ export const copy = {
     argsKnown: 'Decoded fields',
     argsRaw: 'Raw args (JSON)',
     payloadBytes: 'payload bytes after disc',
+    missingFrameResetWarn:
+      'No create_frame / reset_frame before this let in the transaction. Binding indexes are shown from $0 — they may continue from an earlier tx in the same bundle.',
   },
   zh: {
     brand: 'Ifx',
@@ -147,6 +149,8 @@ export const copy = {
     argsKnown: '已解码字段',
     argsRaw: '原始参数（JSON）',
     payloadBytes: 'discriminator 后的 payload 字节',
+    missingFrameResetWarn:
+      '本交易在此 let 之前没有 create_frame / reset_frame。绑定下标按 $0 起算展示 — 若与同 bundle 前一笔交易衔接，实际下标可能不是从 0 开始。',
   },
 } as const
 

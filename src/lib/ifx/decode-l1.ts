@@ -39,6 +39,13 @@ export type IfxL1View = {
   args: IfxL1Decoded
   summary: string
   lines: string[]
+  /** Frame binding index assigned to the first `let` binding in this ix. */
+  bindingBase?: number
+  /**
+   * True when this `let` appears before any `create_frame` / `reset_frame`
+   * in the same transaction — explorer assumes `$0` but flags the risk.
+   */
+  missingFrameReset?: boolean
 }
 
 function shortPk(bytes: Uint8Array): string {

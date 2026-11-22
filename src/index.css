@@ -755,6 +755,16 @@ textarea {
   color: var(--ifx);
 }
 
+.l1-warn {
+  margin: 0 0 0.55rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, #f87171 45%, transparent);
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #fecaca;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
 .l1-lines {
   list-style: none;
   margin: 0;

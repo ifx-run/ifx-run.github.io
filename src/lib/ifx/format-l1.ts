@@ -148,8 +148,20 @@ function formatArm(arm: DecodedIfElseArm, label: string): string[] {
   ]
 }
 
+export type FormatL1Options = {
+  /**
+   * Frame `index_count` before this instruction's bindings.
+   * Shared across lets until create/reset; not per-instruction.
+   */
+  bindingBase?: number
+}
+
 /** Human-readable lines describing what the instruction does. */
-export function formatL1Lines(decoded: IfxL1Decoded): string[] {
+export function formatL1Lines(
+  decoded: IfxL1Decoded,
+  opts: FormatL1Options = {},
+): string[] {
+  const bindingBase = opts.bindingBase ?? 0
   switch (decoded.kind) {
     case 'create_frame':
       return [
@@ -162,7 +174,9 @@ export function formatL1Lines(decoded: IfxL1Decoded): string[] {
     case 'reset_frame':
       return ['reset frame tape / binding index']
     case 'let':
-      return decoded.bindings.map((b, i) => formatLetBinding(b, i))
+      return decoded.bindings.map((b, i) =>
+        formatLetBinding(b, bindingBase + i),
+      )
     case 'assert':
       return [`assert ${formatExpr(decoded.cond)}`]
     case 'assert_multi':
@@ -178,8 +192,11 @@ export function formatL1Lines(decoded: IfxL1Decoded): string[] {
   }
 }
 
-export function formatL1Summary(decoded: IfxL1Decoded): string {
-  const lines = formatL1Lines(decoded)
+export function formatL1Summary(
+  decoded: IfxL1Decoded,
+  opts: FormatL1Options = {},
+): string {
+  const lines = formatL1Lines(decoded, opts)
   if (lines.length === 0) return decoded.kind
   if (lines.length === 1) return lines[0]!
   if (decoded.kind === 'let') {
