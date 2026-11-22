@@ -6,10 +6,9 @@ import {
 
 /**
  * Soft cap for remembered transactions.
- * Wire blobs are small; 24 is plenty of history without meaningful quota pressure.
- * (16 would also be fine.)
+ * Wire blobs are small; 32 (2^5) is plenty of history without meaningful quota pressure.
  */
-export const MAX_WIRE_CACHE = 24
+export const MAX_WIRE_CACHE = 32
 
 const LEGACY_KEY = 'ifx.run.wire'
 const DRAFT_KEY = 'ifx.run.wireDraft'
