@@ -679,7 +679,7 @@ function InstructionList({
   const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
   const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
   const [renameModal, setRenameModal] = useState<
-    | { kind: 'binding'; frame: string; index: number }
+    | { kind: 'binding'; frame: string; index: number; defIx: number }
     | { kind: 'address'; address: string }
     | null
   >(null)
@@ -781,9 +781,12 @@ function InstructionList({
     setAliases(getStoredAliases(wireKey))
   }, [wireKey])
 
-  const openRenameBinding = useCallback((frame: string, index: number) => {
-    setRenameModal({ kind: 'binding', frame, index })
-  }, [])
+  const openRenameBinding = useCallback(
+    (frame: string, index: number, defIx: number) => {
+      setRenameModal({ kind: 'binding', frame, index, defIx })
+    },
+    [],
+  )
 
   const openRenameAddress = useCallback((address: string) => {
     setRenameModal({ kind: 'address', address })
@@ -988,6 +991,15 @@ function InstructionList({
           onClear={() =>
             clearBindingName(renameModal.frame, renameModal.index)
           }
+          onGoToDef={() => {
+            const def = resolveBindingDef(
+              instructions,
+              renameModal.defIx,
+              renameModal.index,
+            )
+            setRenameModal(null)
+            if (def) focusLine(def)
+          }}
           onClose={() => setRenameModal(null)}
         />
       )}
@@ -1099,6 +1111,7 @@ function AliasEditModal({
   metaTitle,
   onSave,
   onClear,
+  onGoToDef,
   onClose,
 }: {
   title: ReactNode
@@ -1109,6 +1122,7 @@ function AliasEditModal({
   metaTitle?: string
   onSave: (name: string) => void
   onClear: () => void
+  onGoToDef?: () => void
   onClose: () => void
 }) {
   const { t } = useApp()
@@ -1172,6 +1186,11 @@ function AliasEditModal({
             </p>
           ) : null}
           <div className="rename-modal-actions">
+            {onGoToDef ? (
+              <button type="button" className="ghost" onClick={onGoToDef}>
+                {t.frameGoToDef}
+              </button>
+            ) : null}
             <button
               type="button"
               className="ghost"
@@ -1275,7 +1294,7 @@ function FrameStrips({
 }: {
   frames: FrameView[]
   aliases: Record<string, string>
-  onRename: (frame: string, index: number) => void
+  onRename: (frame: string, index: number, defIx: number) => void
   onClearName: (frame: string, index: number) => void
   onJumpDef: (defIx: number) => void
 }) {
@@ -1310,7 +1329,7 @@ function FrameStrips({
                     type="button"
                     className="frame-var-main"
                     title={`${name ? `${name} · ` : ''}$${v.index} · ${v.ty} · ${v.kind}\n${t.frameRenameTitle}`}
-                    onClick={() => onRename(frame.address, v.index)}
+                    onClick={() => onRename(frame.address, v.index, v.defIx)}
                     onDoubleClick={(e) => {
                       e.preventDefault()
                       onJumpDef(v.defIx)

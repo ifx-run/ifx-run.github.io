@@ -109,6 +109,7 @@ export const copy = {
     frameRenameSave: 'Save',
     frameRenameCancel: 'Cancel',
     frameClearName: 'Clear name',
+    frameGoToDef: 'Go to definition',
     frameClearAllNames: 'Clear all names',
     frameClearAllNamesConfirmTitle: 'Clear all names?',
     frameClearAllNamesConfirmBody:
@@ -215,6 +216,7 @@ export const copy = {
     frameRenameSave: '保存',
     frameRenameCancel: '取消',
     frameClearName: '清除名称',
+    frameGoToDef: '跳转到定义',
     frameClearAllNames: '清除全部名称',
     frameClearAllNamesConfirmTitle: '清除全部名称？',
     frameClearAllNamesConfirmBody:
