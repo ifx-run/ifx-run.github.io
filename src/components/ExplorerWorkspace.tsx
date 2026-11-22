@@ -343,75 +343,115 @@ function EmptyState() {
   )
 }
 
+function MetaRow({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="meta-row">
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  )
+}
+
 function PacketPanel({ result }: { result: ExploredTransaction }) {
   const { t } = useApp()
   const { packet } = result
-  const version =
+  const versionLabel =
     packet.version === 'legacy' ? 'legacy' : `v${packet.version}`
+  const v1 = packet.v1Header
 
   return (
     <section className="panel packet-panel">
       <h2>{t.packet}</h2>
-      <dl className="meta-dl">
-        <div>
-          <dt>{t.version}</dt>
-          <dd>
-            <span className={`ver-pill ver-${version}`}>{version}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>{t.encoding}</dt>
-          <dd>
-            <code>{result.encoding}</code>
-          </dd>
-        </div>
-        <div>
-          <dt>{t.wireBytes}</dt>
-          <dd>
-            {packet.wireBytes || '—'} B
-            {packet.messageBytes ? (
-              <span className="muted"> · msg {packet.messageBytes} B</span>
-            ) : null}
-          </dd>
-        </div>
-        <div>
-          <dt>{t.alts}</dt>
-          <dd>
-            {packet.altCount === 0
-              ? '—'
-              : packet.altAddresses.map((a) => shortenAddress(a)).join(', ')}
-            {result.needsAltRpc && (
-              <span className="muted"> · {t.altUnresolved}</span>
-            )}
-            {result.altResolved && packet.altCount > 0 && (
-              <span className="muted"> · {t.altResolved}</span>
-            )}
-          </dd>
-        </div>
-        {packet.v1Header && (
-          <div className="v1-block">
-            <dt>{t.v1Header}</dt>
-            <dd>
-              <div>
-                {t.cuLimit}:{' '}
-                <code>{packet.v1Header.computeUnitLimit ?? 'unset (0)'}</code>
+      <dl className="meta-grid">
+        <MetaRow label={t.version}>
+          <span className={`ver-pill ver-${versionLabel}`}>{versionLabel}</span>
+        </MetaRow>
+        <MetaRow label={t.encoding}>
+          <code>{result.encoding}</code>
+        </MetaRow>
+        <MetaRow label={t.wireBytes}>
+          <code>{packet.wireBytes.toLocaleString()} B</code>
+        </MetaRow>
+        <MetaRow label={t.messageBytes}>
+          <code>
+            {packet.messageBytes
+              ? `${packet.messageBytes.toLocaleString()} B`
+              : '—'}
+          </code>
+        </MetaRow>
+        <MetaRow label={t.staticAccounts}>
+          <code>{packet.staticAccountCount}</code>
+        </MetaRow>
+        <MetaRow label={t.packetInstructionCount}>
+          <code>{packet.instructionCount}</code>
+        </MetaRow>
+        <MetaRow label={t.lookupTables}>
+          {packet.altCount === 0 ? (
+            <span className="muted">—</span>
+          ) : (
+            <div className="meta-stack">
+              <div className="meta-stack-head">
+                <code>{packet.altCount}</code>
+                {result.needsAltRpc && (
+                  <span className="meta-tag is-warn">{t.altUnresolved}</span>
+                )}
+                {result.altResolved && (
+                  <span className="meta-tag is-ok">{t.altResolved}</span>
+                )}
               </div>
-              <div>
-                {t.loadedData}:{' '}
-                <code>
-                  {packet.v1Header.loadedAccountsDataSizeLimit ?? 'unset (0)'}
-                </code>
-              </div>
-              {packet.v1Header.priorityFeeLamports !== undefined && (
-                <div>
-                  priority fee:{' '}
-                  <code>{packet.v1Header.priorityFeeLamports} lamports</code>
-                </div>
-              )}
-            </dd>
-          </div>
-        )}
+              <ul className="meta-addr-list">
+                {packet.altAddresses.map((a) => (
+                  <li key={a}>
+                    <code title={a}>{shortenAddress(a, 6, 6)}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </MetaRow>
       </dl>
+
+      {v1 && (
+        <>
+          <h3 className="meta-section-title">{t.v1Header}</h3>
+          <dl className="meta-grid">
+            <MetaRow label={t.computeUnitLimit}>
+              <code>
+                {v1.computeUnitLimit !== undefined
+                  ? v1.computeUnitLimit.toLocaleString()
+                  : t.valueUnset}
+              </code>
+            </MetaRow>
+            <MetaRow label={t.loadedDataSizeLimit}>
+              <code>
+                {v1.loadedAccountsDataSizeLimit !== undefined
+                  ? `${v1.loadedAccountsDataSizeLimit.toLocaleString()} B`
+                  : t.valueUnset}
+              </code>
+            </MetaRow>
+            <MetaRow label={t.heapSize}>
+              <code>
+                {v1.heapSize !== undefined
+                  ? `${v1.heapSize.toLocaleString()} B`
+                  : t.valueUnset}
+              </code>
+            </MetaRow>
+            <MetaRow label={t.priorityFee}>
+              <code>
+                {v1.priorityFeeLamports !== undefined
+                  ? `${v1.priorityFeeLamports} lamports`
+                  : t.valueUnset}
+              </code>
+            </MetaRow>
+          </dl>
+        </>
+      )}
     </section>
   )
 }
