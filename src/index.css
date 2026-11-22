@@ -1045,6 +1045,43 @@ textarea {
   white-space: nowrap;
   padding-top: 0.1rem;
 }
+.rename-modal {
+  max-height: none;
+}
+.rename-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 0.9rem 1rem;
+}
+.rename-modal-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.rename-modal-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.55rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.95rem;
+}
+.rename-modal-input:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.rename-modal-meta {
+  margin: 0;
+  font-size: 0.78rem;
+}
+.rename-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
 .l1-raw {
   margin-top: 0.5rem;
   font-size: 0.82rem;

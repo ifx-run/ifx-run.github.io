@@ -435,6 +435,10 @@ function InstructionList({
   const [expanded, setExpanded] = useState(() => defaultExpanded(instructions))
   const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
   const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
+  const [renameModal, setRenameModal] = useState<{
+    frame: string
+    index: number
+  } | null>(null)
   const [aliases, setAliases] = useState<Record<string, string>>(() =>
     getStoredAliases(wireKey),
   )
@@ -444,6 +448,7 @@ function InstructionList({
     setExpanded(defaultExpanded(instructions))
     setFlashLine(null)
     setRefsModal(null)
+    setRenameModal(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultKey])
 
@@ -530,22 +535,24 @@ function InstructionList({
     setAliases(getStoredAliases(wireKey))
   }, [wireKey])
 
-  const renameBinding = useCallback(
-    (frame: string, index: number) => {
-      const key = aliasKey(frame, index)
-      const current = aliases[key] ?? ''
-      const next = window.prompt(t.frameRenamePrompt, current)
-      if (next === null) return
-      setStoredAlias(wireKey, key, next)
+  const openRename = useCallback((frame: string, index: number) => {
+    setRenameModal({ frame, index })
+  }, [])
+
+  const saveRename = useCallback(
+    (frame: string, index: number, name: string) => {
+      setStoredAlias(wireKey, aliasKey(frame, index), name)
       refreshAliases()
+      setRenameModal(null)
     },
-    [aliases, refreshAliases, t.frameRenamePrompt, wireKey],
+    [refreshAliases, wireKey],
   )
 
   const clearBindingName = useCallback(
     (frame: string, index: number) => {
       setStoredAlias(wireKey, aliasKey(frame, index), '')
       refreshAliases()
+      setRenameModal(null)
     },
     [refreshAliases, wireKey],
   )
@@ -583,7 +590,7 @@ function InstructionList({
           frames={frames}
           aliases={aliases}
           aliasCount={aliasCount}
-          onRename={renameBinding}
+          onRename={openRename}
           onClearName={clearBindingName}
           onClearAllNames={clearAllBindingNames}
           onJumpDef={(defIx) => {
@@ -667,7 +674,119 @@ function InstructionList({
           onPick={focusLine}
         />
       )}
+      {renameModal && (
+        <RenameBindingModal
+          frame={renameModal.frame}
+          index={renameModal.index}
+          initialName={
+            aliases[aliasKey(renameModal.frame, renameModal.index)] ?? ''
+          }
+          onSave={(name) =>
+            saveRename(renameModal.frame, renameModal.index, name)
+          }
+          onClear={() =>
+            clearBindingName(renameModal.frame, renameModal.index)
+          }
+          onClose={() => setRenameModal(null)}
+        />
+      )}
     </section>
+  )
+}
+
+function RenameBindingModal({
+  frame,
+  index,
+  initialName,
+  onSave,
+  onClear,
+  onClose,
+}: {
+  frame: string
+  index: number
+  initialName: string
+  onSave: (name: string) => void
+  onClear: () => void
+  onClose: () => void
+}) {
+  const { t } = useApp()
+  const [draft, setDraft] = useState(initialName)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const color = bindingColor(index)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    onSave(draft)
+  }
+
+  return (
+    <div
+      className="refs-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="refs-modal rename-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.frameRenameTitle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="refs-modal-head">
+          <h3>
+            {t.frameRenameTitle}{' '}
+            <span style={{ color }}>${index}</span>
+          </h3>
+          <button type="button" className="ghost tiny" onClick={onClose}>
+            {t.frameRenameCancel}
+          </button>
+        </div>
+        <form className="rename-modal-body" onSubmit={submit}>
+          <label className="rename-modal-label" htmlFor="binding-alias-input">
+            {t.frameRenamePrompt}
+          </label>
+          <input
+            id="binding-alias-input"
+            ref={inputRef}
+            className="rename-modal-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={`$${index}`}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <p className="rename-modal-meta muted">
+            <code title={frame}>{shortenAddress(frame, 6, 6)}</code>
+          </p>
+          <div className="rename-modal-actions">
+            <button
+              type="button"
+              className="ghost"
+              disabled={!initialName}
+              onClick={onClear}
+            >
+              {t.frameClearName}
+            </button>
+            <button type="submit" className="primary">
+              {t.frameRenameSave}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
