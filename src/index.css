@@ -678,8 +678,9 @@ textarea {
 .timeline-item {
   width: 100%;
   display: grid;
-  grid-template-columns: 2rem 7rem 1fr;
-  gap: 0.5rem;
+  /* idx | program name (fit content) | instruction summary */
+  grid-template-columns: 2rem max-content minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
   align-items: center;
   text-align: left;
   background: transparent;
@@ -716,6 +717,7 @@ textarea {
 .ix-name {
   font-weight: 500;
   color: var(--text);
+  white-space: nowrap;
 }
 .is-ifx .ix-name {
   color: var(--ifx);

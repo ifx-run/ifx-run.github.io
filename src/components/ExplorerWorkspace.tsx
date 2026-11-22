@@ -317,12 +317,8 @@ function InstructionTimeline({
               onClick={() => onSelect(ix.index)}
             >
               <span className="ix-idx">{ix.index}</span>
-              <span className="ix-name">
-                {ix.programShort && ix.ixName
-                  ? `${ix.programShort}.${ix.ixName}`
-                  : ix.programShort
-                    ? ix.programShort
-                    : shortenAddress(ix.programId, 5, 4)}
+              <span className="ix-name" title={ix.programId}>
+                {ix.programShort ?? shortenAddress(ix.programId, 5, 4)}
               </span>
               <span className="ix-sum">{ix.summary}</span>
             </button>
