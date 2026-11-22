@@ -120,6 +120,11 @@ export const copy = {
     addressCopied: 'Copied',
     addressOpenSolscan: 'Open in Solscan',
     addressAlias: 'Name',
+    annotationExport: 'Export notes',
+    annotationImport: 'Import notes',
+    annotationExportTitle: 'Download wire + names as JSON',
+    annotationImportTitle: 'Open a shared annotation JSON',
+    annotationImportError: 'Could not import annotation file.',
   },
   zh: {
     brand: 'Ifx',
@@ -221,6 +226,11 @@ export const copy = {
     addressCopied: '已复制',
     addressOpenSolscan: '在 Solscan 打开',
     addressAlias: '命名',
+    annotationExport: '导出注释',
+    annotationImport: '导入注释',
+    annotationExportTitle: '下载交易数据与命名为 JSON',
+    annotationImportTitle: '打开他人分享的注释 JSON',
+    annotationImportError: '无法导入该注释文件。',
   },
 } as const
 

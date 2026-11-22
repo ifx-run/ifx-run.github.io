@@ -33,8 +33,16 @@ import {
 import {
   clearStoredAliases,
   getStoredAliases,
+  mergeStoredAliases,
   setStoredAlias,
 } from '../lib/solana/alias-storage'
+import {
+  annotationDownloadName,
+  annotationPackageToJson,
+  annotationWireText,
+  buildAnnotationPackage,
+  parseAnnotationJson,
+} from '../lib/solana/annotation-share'
 import { solscanAccountUrl } from '../lib/solana/solscan'
 import { bindingColor } from '../lib/ifx/binding-color'
 import {
@@ -58,6 +66,7 @@ export function ExplorerWorkspace() {
   const abortRef = useRef<AbortController | null>(null)
   const decodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ingressRef = useRef<HTMLFormElement | null>(null)
+  const importFileRef = useRef<HTMLInputElement | null>(null)
 
   const [input, setInput] = useState(() => getStoredWire())
   const [rpcDraft, setRpcDraft] = useState(() => getStoredRpcUrl())
@@ -67,6 +76,8 @@ export function ExplorerWorkspace() {
   const [resolving, setResolving] = useState(false)
   /** Collapses on successful decode; outside click also collapses when result exists. */
   const [ingressExpanded, setIngressExpanded] = useState(true)
+  /** Bumps when aliases change without a wire-key change (e.g. import). */
+  const [aliasEpoch, setAliasEpoch] = useState(0)
 
   const applyResult = useCallback((explored: ExploredTransaction) => {
     setResult(explored)
@@ -212,6 +223,40 @@ export function ExplorerWorkspace() {
     }
   }
 
+  function onExportAnnotation() {
+    try {
+      const pkg = buildAnnotationPackage(input)
+      const blob = new Blob([annotationPackageToJson(pkg)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = annotationDownloadName(pkg)
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.annotationImportError)
+    }
+  }
+
+  async function onImportAnnotationFile(file: File) {
+    try {
+      const text = await file.text()
+      const pkg = parseAnnotationJson(text)
+      const wire = annotationWireText(pkg)
+      mergeStoredAliases(wire, pkg.aliases)
+      setStoredWire(wire)
+      setInput(wire)
+      setAliasEpoch((n) => n + 1)
+      setError(null)
+      setRpcError(null)
+      run(wire)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.annotationImportError)
+    }
+  }
+
   const showAltRpc = Boolean(result?.needsAltRpc)
   const hasInput = Boolean(input.trim())
   const canCollapseIngress = Boolean(result)
@@ -244,6 +289,35 @@ export function ExplorerWorkspace() {
           </label>
           <div className="ingress-head-actions">
             {wireBytes && <CopyBytesButtons bytes={wireBytes} />}
+            <input
+              ref={importFileRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (file) void onImportAnnotationFile(file)
+              }}
+            />
+            <button
+              type="button"
+              className="ghost tiny"
+              title={t.annotationImportTitle}
+              onClick={() => importFileRef.current?.click()}
+            >
+              {t.annotationImport}
+            </button>
+            {result && (
+              <button
+                type="button"
+                className="ghost tiny"
+                title={t.annotationExportTitle}
+                onClick={onExportAnnotation}
+              >
+                {t.annotationExport}
+              </button>
+            )}
             {canCollapseIngress && (
               <button
                 type="button"
@@ -355,6 +429,7 @@ export function ExplorerWorkspace() {
             <InstructionList
               instructions={result.instructions}
               wireKey={input.trim()}
+              aliasEpoch={aliasEpoch}
             />
           )}
 
@@ -578,9 +653,11 @@ type RefsModalState = {
 function InstructionList({
   instructions,
   wireKey,
+  aliasEpoch,
 }: {
   instructions: ExploredInstruction[]
   wireKey: string
+  aliasEpoch: number
 }) {
   const { t } = useApp()
   const resultKey = useMemo(
@@ -623,7 +700,7 @@ function InstructionList({
 
   useEffect(() => {
     setAliases(getStoredAliases(wireKey))
-  }, [wireKey, resultKey])
+  }, [wireKey, resultKey, aliasEpoch])
 
   useLayoutEffect(() => {
     if (!flashLine) return

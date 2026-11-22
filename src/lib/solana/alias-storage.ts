@@ -123,3 +123,29 @@ export function clearStoredAliases(wire?: string): void {
     /* ignore */
   }
 }
+
+/** Replace all aliases for this wire (empty map clears). */
+export function replaceStoredAliases(
+  wire: string,
+  aliases: Record<string, string>,
+): void {
+  const key = wireAliasBagKey(wire)
+  if (key === 'raw:') return
+  const map = readBag()
+  const cleaned: Record<string, string> = {}
+  for (const [aliasKey, name] of Object.entries(aliases)) {
+    const trimmed = name.trim()
+    if (trimmed) cleaned[aliasKey] = trimmed
+  }
+  if (Object.keys(cleaned).length === 0) delete map[key]
+  else map[key] = cleaned
+  writeBag(map)
+}
+
+/** Merge aliases for this wire; imported names win on conflict. */
+export function mergeStoredAliases(
+  wire: string,
+  aliases: Record<string, string>,
+): void {
+  replaceStoredAliases(wire, { ...getStoredAliases(wire), ...aliases })
+}
