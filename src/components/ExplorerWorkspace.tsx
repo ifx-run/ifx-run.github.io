@@ -34,6 +34,7 @@ import {
   getStoredAliases,
   setStoredAlias,
 } from '../lib/solana/alias-storage'
+import { solscanAccountUrl } from '../lib/solana/solscan'
 import { bindingColor } from '../lib/ifx/binding-color'
 import {
   buildBindingRefIndex,
@@ -435,10 +436,11 @@ function InstructionList({
   const [expanded, setExpanded] = useState(() => defaultExpanded(instructions))
   const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
   const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
-  const [renameModal, setRenameModal] = useState<{
-    frame: string
-    index: number
-  } | null>(null)
+  const [renameModal, setRenameModal] = useState<
+    | { kind: 'binding'; frame: string; index: number }
+    | { kind: 'address'; address: string }
+    | null
+  >(null)
   const [aliases, setAliases] = useState<Record<string, string>>(() =>
     getStoredAliases(wireKey),
   )
@@ -535,13 +537,26 @@ function InstructionList({
     setAliases(getStoredAliases(wireKey))
   }, [wireKey])
 
-  const openRename = useCallback((frame: string, index: number) => {
-    setRenameModal({ frame, index })
+  const openRenameBinding = useCallback((frame: string, index: number) => {
+    setRenameModal({ kind: 'binding', frame, index })
+  }, [])
+
+  const openRenameAddress = useCallback((address: string) => {
+    setRenameModal({ kind: 'address', address })
   }, [])
 
   const saveRename = useCallback(
-    (frame: string, index: number, name: string) => {
-      setStoredAlias(wireKey, aliasKey(frame, index), name)
+    (key: string, name: string) => {
+      setStoredAlias(wireKey, key, name)
+      refreshAliases()
+      setRenameModal(null)
+    },
+    [refreshAliases, wireKey],
+  )
+
+  const clearAliasKey = useCallback(
+    (key: string) => {
+      setStoredAlias(wireKey, key, '')
       refreshAliases()
       setRenameModal(null)
     },
@@ -550,15 +565,24 @@ function InstructionList({
 
   const clearBindingName = useCallback(
     (frame: string, index: number) => {
-      setStoredAlias(wireKey, aliasKey(frame, index), '')
-      refreshAliases()
-      setRenameModal(null)
+      clearAliasKey(aliasKey(frame, index))
     },
-    [refreshAliases, wireKey],
+    [clearAliasKey],
   )
 
   const clearAllBindingNames = useCallback(() => {
-    clearStoredAliases(wireKey)
+    const current = getStoredAliases(wireKey)
+    let changed = false
+    for (const key of Object.keys(current)) {
+      // Binding keys look like `<framePubkey>:<index>`
+      if (/:\d+$/.test(key)) {
+        setStoredAlias(wireKey, key, '')
+        changed = true
+      }
+    }
+    if (!changed && Object.keys(current).length === 0) {
+      clearStoredAliases(wireKey)
+    }
     refreshAliases()
   }, [refreshAliases, wireKey])
 
@@ -570,7 +594,9 @@ function InstructionList({
     [aliases],
   )
 
-  const aliasCount = Object.keys(aliases).length
+  const bindingAliasCount = Object.keys(aliases).filter((k) =>
+    /:\d+$/.test(k),
+  ).length
 
   return (
     <div className="instructions-column">
@@ -578,7 +604,7 @@ function InstructionList({
         <section className="panel frame-panel">
           <div className="panel-head">
             <h2>{t.frameStrip}</h2>
-            {aliasCount > 0 && (
+            {bindingAliasCount > 0 && (
               <button
                 type="button"
                 className="ghost tiny"
@@ -591,7 +617,7 @@ function InstructionList({
           <FrameStrips
             frames={frames}
             aliases={aliases}
-            onRename={openRename}
+            onRename={openRenameBinding}
             onClearName={clearBindingName}
             onJumpDef={(defIx) => {
               setExpanded((prev) => {
@@ -659,11 +685,14 @@ function InstructionList({
                     flashLine?.ixIndex === ix.index ? flashLine.lineIndex : null
                   }
                   refIndex={refIndex}
+                  aliases={aliases}
                   labelFor={(n) => labelFor(frameAddr, n)}
                   onValueClick={(bindingIndex) =>
                     focusBinding(ix.index, bindingIndex)
                   }
                   onFindRefs={onFindRefs}
+                  onRenameAddress={openRenameAddress}
+                  onClearAddress={(address) => clearAliasKey(address)}
                 />
               )}
             </li>
@@ -688,15 +717,28 @@ function InstructionList({
           onPick={focusLine}
         />
       )}
-      {renameModal && (
-        <RenameBindingModal
-          frame={renameModal.frame}
-          index={renameModal.index}
+      {renameModal?.kind === 'binding' && (
+        <AliasEditModal
+          title={
+            <>
+              {t.frameRenameTitle}{' '}
+              <span style={{ color: bindingColor(renameModal.index) }}>
+                ${renameModal.index}
+              </span>
+            </>
+          }
+          prompt={t.frameRenamePrompt}
           initialName={
             aliases[aliasKey(renameModal.frame, renameModal.index)] ?? ''
           }
+          placeholder={`$${renameModal.index}`}
+          meta={shortenAddress(renameModal.frame, 6, 6)}
+          metaTitle={renameModal.frame}
           onSave={(name) =>
-            saveRename(renameModal.frame, renameModal.index, name)
+            saveRename(
+              aliasKey(renameModal.frame, renameModal.index),
+              name,
+            )
           }
           onClear={() =>
             clearBindingName(renameModal.frame, renameModal.index)
@@ -704,21 +746,40 @@ function InstructionList({
           onClose={() => setRenameModal(null)}
         />
       )}
+      {renameModal?.kind === 'address' && (
+        <AliasEditModal
+          title={t.addressRenameTitle}
+          prompt={t.addressRenamePrompt}
+          initialName={aliases[renameModal.address] ?? ''}
+          placeholder={shortenAddress(renameModal.address, 8, 8)}
+          meta={shortenAddress(renameModal.address, 8, 8)}
+          metaTitle={renameModal.address}
+          onSave={(name) => saveRename(renameModal.address, name)}
+          onClear={() => clearAliasKey(renameModal.address)}
+          onClose={() => setRenameModal(null)}
+        />
+      )}
     </div>
   )
 }
 
-function RenameBindingModal({
-  frame,
-  index,
+function AliasEditModal({
+  title,
+  prompt,
   initialName,
+  placeholder,
+  meta,
+  metaTitle,
   onSave,
   onClear,
   onClose,
 }: {
-  frame: string
-  index: number
+  title: ReactNode
+  prompt: string
   initialName: string
+  placeholder: string
+  meta?: string
+  metaTitle?: string
   onSave: (name: string) => void
   onClear: () => void
   onClose: () => void
@@ -726,7 +787,7 @@ function RenameBindingModal({
   const { t } = useApp()
   const [draft, setDraft] = useState(initialName)
   const inputRef = useRef<HTMLInputElement>(null)
-  const color = bindingColor(index)
+  const inputId = useId()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -756,35 +817,33 @@ function RenameBindingModal({
         className="refs-modal rename-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={t.frameRenameTitle}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="refs-modal-head">
-          <h3>
-            {t.frameRenameTitle}{' '}
-            <span style={{ color }}>${index}</span>
-          </h3>
+          <h3>{title}</h3>
           <button type="button" className="ghost tiny" onClick={onClose}>
             {t.frameRenameCancel}
           </button>
         </div>
         <form className="rename-modal-body" onSubmit={submit}>
-          <label className="rename-modal-label" htmlFor="binding-alias-input">
-            {t.frameRenamePrompt}
+          <label className="rename-modal-label" htmlFor={inputId}>
+            {prompt}
           </label>
           <input
-            id="binding-alias-input"
+            id={inputId}
             ref={inputRef}
             className="rename-modal-input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={`$${index}`}
+            placeholder={placeholder}
             spellCheck={false}
             autoComplete="off"
           />
-          <p className="rename-modal-meta muted">
-            <code title={frame}>{shortenAddress(frame, 6, 6)}</code>
-          </p>
+          {meta ? (
+            <p className="rename-modal-meta muted">
+              <code title={metaTitle}>{meta}</code>
+            </p>
+          ) : null}
           <div className="rename-modal-actions">
             <button
               type="button"
@@ -801,6 +860,82 @@ function RenameBindingModal({
         </form>
       </div>
     </div>
+  )
+}
+
+function AddressDisplay({
+  address,
+  aliases,
+  cluster,
+  onRename,
+  onClear,
+}: {
+  address: string
+  aliases: Record<string, string>
+  cluster?: string
+  onRename: (address: string) => void
+  onClear: (address: string) => void
+}) {
+  const { t } = useApp()
+  const [copied, setCopied] = useState(false)
+  const alias = aliases[address]
+  const label = alias || address
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(address)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1200)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <span className="addr-display">
+      <a
+        className="addr-link break"
+        href={solscanAccountUrl(address, cluster)}
+        target="_blank"
+        rel="noreferrer"
+        title={`${t.addressOpenSolscan}\n${address}`}
+      >
+        {alias ? (
+          <>
+            <span className="addr-alias">{alias}</span>
+            <span className="addr-full muted">{shortenAddress(address, 4, 4)}</span>
+          </>
+        ) : (
+          label
+        )}
+      </a>
+      <button
+        type="button"
+        className="addr-action"
+        title={t.addressAlias}
+        onClick={() => onRename(address)}
+      >
+        {t.addressAlias}
+      </button>
+      <button
+        type="button"
+        className="addr-action"
+        title={t.addressCopy}
+        onClick={() => void copy()}
+      >
+        {copied ? t.addressCopied : t.addressCopy}
+      </button>
+      {alias ? (
+        <button
+          type="button"
+          className="addr-action"
+          title={t.frameClearName}
+          onClick={() => onClear(address)}
+        >
+          ×
+        </button>
+      ) : null}
+    </span>
   )
 }
 
@@ -951,13 +1086,17 @@ function InstructionBody({
   ix,
   flashLine,
   refIndex,
+  aliases,
   labelFor,
   onValueClick,
   onFindRefs,
+  onRenameAddress,
+  onClearAddress,
 }: {
   ix: ExploredInstruction
   flashLine: number | null
   refIndex: Map<string, BindingLoc[]>
+  aliases: Record<string, string>
   labelFor: (index: number) => string
   onValueClick: (bindingIndex: number) => void
   onFindRefs: (
@@ -965,6 +1104,8 @@ function InstructionBody({
     defIx: number,
     defLine: number,
   ) => void
+  onRenameAddress: (address: string) => void
+  onClearAddress: (address: string) => void
 }) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
@@ -1017,14 +1158,14 @@ function InstructionBody({
         <div>
           <dt>{t.program}</dt>
           <dd>
-            {ix.programLabel ? (
-              <>
-                <strong>{ix.programLabel}</strong>
-                <code className="break">{ix.programId}</code>
-              </>
-            ) : (
-              <code className="break">{ix.programId}</code>
-            )}
+            {ix.programLabel ? <strong>{ix.programLabel}</strong> : null}
+            <AddressDisplay
+              address={ix.programId}
+              aliases={aliases}
+              cluster={ix.ifxCluster}
+              onRename={onRenameAddress}
+              onClear={onClearAddress}
+            />
           </dd>
         </div>
         {(ix.ixLabel || ix.ifxName) && (
@@ -1083,7 +1224,13 @@ function InstructionBody({
                   {t.accountRoleWritable}
                 </span>
               </span>
-              <code className="break">{a.address}</code>
+              <AddressDisplay
+                address={a.address}
+                aliases={aliases}
+                cluster={ix.ifxCluster}
+                onRename={onRenameAddress}
+                onClear={onClearAddress}
+              />
             </li>
           )
         })}
@@ -1115,9 +1262,18 @@ function InstructionBody({
                     <L1LineWithLinks
                       line={line}
                       labelFor={labelFor}
+                      addressLabelFor={(addr) => aliases[addr] || addr}
                       onAcctClick={focusRemainingAccount}
                       onRangeClick={focusRemainingRange}
                       onValueClick={onValueClick}
+                      onAddressClick={(addr) =>
+                        window.open(
+                          solscanAccountUrl(addr, ix.ifxCluster),
+                          '_blank',
+                          'noopener,noreferrer',
+                        )
+                      }
+                      onAddressRename={onRenameAddress}
                     />
                     {bindingIndex !== null && (
                       <button
@@ -1200,18 +1356,26 @@ function InstructionBody({
 function L1LineWithLinks({
   line,
   labelFor,
+  addressLabelFor,
   onAcctClick,
   onRangeClick,
   onValueClick,
+  onAddressClick,
+  onAddressRename,
 }: {
   line: string
   labelFor: (index: number) => string
+  addressLabelFor: (address: string) => string
   onAcctClick: (index: number) => void
   onRangeClick: (start: number, len: number) => void
   onValueClick: (bindingIndex: number) => void
+  onAddressClick: (address: string) => void
+  onAddressRename: (address: string) => void
 }) {
+  const { t } = useApp()
   const nodes: ReactNode[] = []
-  const re = /accts\[(\d+)\.\.\+(\d+)\]|\$(\d+)|#(\d+)/g
+  const re =
+    /accts\[(\d+)\.\.\+(\d+)\]|\$(\d+)|#(\d+)|([1-9A-HJ-NP-Za-km-z]{32,44})/g
   let last = 0
   let m: RegExpExecArray | null
   let key = 0
@@ -1254,7 +1418,7 @@ function L1LineWithLinks({
           {label}
         </button>,
       )
-    } else {
+    } else if (m[4] !== undefined) {
       const idx = Number(m[4])
       nodes.push(
         <button
@@ -1268,6 +1432,35 @@ function L1LineWithLinks({
         >
           #{idx}
         </button>,
+      )
+    } else {
+      const addr = m[5]!
+      const label = addressLabelFor(addr)
+      nodes.push(
+        <span key={key++} className="addr-inline">
+          <button
+            type="button"
+            className="addr-inline-link"
+            title={`${t.addressOpenSolscan}\n${addr}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAddressClick(addr)
+            }}
+          >
+            {label === addr ? shortenAddress(addr, 6, 6) : label}
+          </button>
+          <button
+            type="button"
+            className="addr-inline-alias"
+            title={t.addressAlias}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAddressRename(addr)
+            }}
+          >
+            ✎
+          </button>
+        </span>,
       )
     }
     last = m.index + m[0].length

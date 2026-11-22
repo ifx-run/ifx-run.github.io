@@ -98,6 +98,12 @@ export const copy = {
     frameRenameCancel: 'Cancel',
     frameClearName: 'Clear name',
     frameClearAllNames: 'Clear all names',
+    addressRenameTitle: 'Rename address',
+    addressRenamePrompt: 'Name for this address (empty = show address)',
+    addressCopy: 'Copy',
+    addressCopied: 'Copied',
+    addressOpenSolscan: 'Open in Solscan',
+    addressAlias: 'Name',
   },
   zh: {
     brand: 'Ifx',
@@ -179,6 +185,12 @@ export const copy = {
     frameRenameCancel: '取消',
     frameClearName: '清除名称',
     frameClearAllNames: '清除全部名称',
+    addressRenameTitle: '重命名地址',
+    addressRenamePrompt: '为该地址命名（留空则显示原地址）',
+    addressCopy: '复制',
+    addressCopied: '已复制',
+    addressOpenSolscan: '在 Solscan 打开',
+    addressAlias: '命名',
   },
 } as const
 
