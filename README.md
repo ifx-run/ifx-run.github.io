@@ -86,7 +86,10 @@ First public allowlist: design, glossary, implementation, frame-authority, bundl
    - Enable **Enforce HTTPS** after DNS propagates
 2. Workflow: [`.github/workflows/pages.yml`](./.github/workflows/pages.yml) builds on `main` and deploys `dist/`
 3. `public/CNAME` contains `ifx.run` (Vite copies it into `dist/`)
-4. Vite `base` is `/` (required for apex custom domains)
+4. **Vite `base`:** until the custom domain is live, the site is served at
+   `https://ifx-run.github.io/ifx-run/` so the default build uses `base: /ifx-run/`.
+   After DNS + Pages custom domain `ifx.run` work, rebuild with `VITE_BASE=/`
+   (set in the Pages workflow env) so asset URLs are root-absolute.
 
 ### DNS (manual)
 

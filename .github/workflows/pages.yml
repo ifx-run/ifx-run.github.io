@@ -31,6 +31,8 @@ jobs:
       - name: Sync docs + build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Project Pages URL is /ifx-run/. After ifx.run custom domain is live, change to `/`.
+          VITE_BASE: /ifx-run/
         run: npm run build
 
       - name: Upload artifact
