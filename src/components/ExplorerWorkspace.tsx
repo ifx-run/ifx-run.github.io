@@ -57,6 +57,7 @@ export function ExplorerWorkspace() {
   const rpcId = useId()
   const abortRef = useRef<AbortController | null>(null)
   const decodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ingressRef = useRef<HTMLFormElement | null>(null)
 
   const [input, setInput] = useState(() => getStoredWire())
   const [rpcDraft, setRpcDraft] = useState(() => getStoredRpcUrl())
@@ -64,12 +65,11 @@ export function ExplorerWorkspace() {
   const [error, setError] = useState<string | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(false)
-  /** After a successful decode, collapse the paste box to one row. */
+  /** Expanded paste box; collapses on outside click once decode succeeds. */
   const [ingressExpanded, setIngressExpanded] = useState(true)
 
   const applyResult = useCallback((explored: ExploredTransaction) => {
     setResult(explored)
-    setIngressExpanded(false)
   }, [])
 
   const clearResult = useCallback(() => {
@@ -137,6 +137,20 @@ export function ExplorerWorkspace() {
     // Restore once on mount; later edits go through onInputChange.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!result || !ingressExpanded) return
+    function onPointerDown(e: PointerEvent) {
+      const root = ingressRef.current
+      if (!root) return
+      const target = e.target
+      if (!(target instanceof Node)) return
+      if (root.contains(target)) return
+      setIngressExpanded(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [result, ingressExpanded])
 
   const resolveAlts = useCallback(async () => {
     const value = input.trim()
@@ -217,6 +231,7 @@ export function ExplorerWorkspace() {
   return (
     <div className="workspace">
       <form
+        ref={ingressRef}
         className={['ingress', ingressCollapsed ? 'is-collapsed' : ''].join(
           ' ',
         )}
