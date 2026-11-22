@@ -1,0 +1,27 @@
+{
+  "repo": "ifx-run/ifx",
+  "ref": "3e863259dea307025a40f27e64d0b6b8a390adcf",
+  "note": "Pin a tag (e.g. v0.1.3) or commit SHA. CI / prebuild syncs only the allowlist below.",
+  "allowlist": [
+    "design.md",
+    "design.zh-CN.md",
+    "glossary.md",
+    "glossary.zh-CN.md",
+    "implementation.md",
+    "implementation.zh-CN.md",
+    "frame-authority.md",
+    "frame-authority.zh-CN.md",
+    "bundles.md",
+    "bundles.zh-CN.md",
+    "structured-cpi-patches.md",
+    "structured-cpi-patches.zh-CN.md",
+    "raw-cpi-patches.md",
+    "raw-cpi-patches.zh-CN.md",
+    "errors.md",
+    "errors.zh-CN.md",
+    "debugging.md",
+    "debugging.zh-CN.md",
+    "typed-let-bindings.md",
+    "typed-let-bindings.zh-CN.md"
+  ]
+}
