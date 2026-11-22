@@ -828,14 +828,124 @@ textarea {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--ifx) 30%, transparent);
   animation: acct-flash 1.1s ease;
 }
+.l1-line-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
 .l1-lines li code,
 .l1-lines li .l1-line-code {
   display: block;
+  flex: 1;
+  min-width: 0;
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 0.88rem;
   line-height: 1.4;
   color: var(--text);
+}
+.refs-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0.12rem 0.45rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.refs-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.refs-btn.is-empty,
+.refs-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--muted);
+}
+.refs-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: color-mix(in srgb, #000 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+.refs-modal {
+  width: min(560px, 100%);
+  max-height: min(70vh, 520px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px color-mix(in srgb, #000 45%, transparent);
+}
+.refs-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.refs-modal-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.refs-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.refs-modal-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: start;
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.refs-modal-row:hover {
+  background: var(--bg-hover);
+  border-color: var(--line);
+}
+.refs-modal-line {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.refs-modal-ix {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0.1rem;
 }
 .l1-raw {
   margin-top: 0.5rem;

@@ -86,6 +86,11 @@ export const copy = {
     payloadBytes: 'payload bytes after disc',
     missingFrameResetWarn:
       'No create_frame / reset_frame before this let in the transaction. Binding indexes are shown from $0 — they may continue from an earlier tx in the same bundle.',
+    findRefs: (n: number) => `refs · ${n}`,
+    noRefs: 'no refs',
+    refsModalTitle: (binding: string) => `References to ${binding}`,
+    refsModalClose: 'Close',
+    refsIxLabel: 'ix',
   },
   zh: {
     brand: 'Ifx',
@@ -155,6 +160,11 @@ export const copy = {
     payloadBytes: 'discriminator 后的 payload 字节',
     missingFrameResetWarn:
       '本交易在此 let 之前没有 create_frame / reset_frame。绑定下标按 $0 起算展示 — 若与同 bundle 前一笔交易衔接，实际下标可能不是从 0 开始。',
+    findRefs: (n: number) => `引用 · ${n}`,
+    noRefs: '无引用',
+    refsModalTitle: (binding: string) => `${binding} 的引用`,
+    refsModalClose: '关闭',
+    refsIxLabel: '指令',
   },
 } as const
 

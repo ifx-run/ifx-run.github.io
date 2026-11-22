@@ -30,6 +30,11 @@ import {
   setStoredWire,
 } from '../lib/solana/wire-storage'
 import { bindingColor } from '../lib/ifx/binding-color'
+import {
+  buildBindingRefIndex,
+  refsForDef,
+  type BindingLoc,
+} from '../lib/ifx/binding-refs'
 
 const DATA_ENCODINGS: DataEncoding[] = ['hex', 'base58', 'base64']
 const AUTO_DECODE_MS = 280
@@ -388,6 +393,11 @@ function defaultExpanded(instructions: ExploredInstruction[]): Set<number> {
   return new Set()
 }
 
+type RefsModalState = {
+  bindingIndex: number
+  refs: BindingLoc[]
+}
+
 function InstructionList({
   instructions,
 }: {
@@ -401,13 +411,19 @@ function InstructionList({
         .join('|'),
     [instructions],
   )
+  const refIndex = useMemo(
+    () => buildBindingRefIndex(instructions),
+    [instructions],
+  )
   const [expanded, setExpanded] = useState(() => defaultExpanded(instructions))
   const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
+  const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
   const flashLineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setExpanded(defaultExpanded(instructions))
     setFlashLine(null)
+    setRefsModal(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultKey])
 
@@ -424,6 +440,15 @@ function InstructionList({
       if (flashLineTimer.current) clearTimeout(flashLineTimer.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!refsModal) return
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') setRefsModal(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [refsModal])
 
   const toggle = useCallback((index: number) => {
     setExpanded((prev) => {
@@ -442,21 +467,39 @@ function InstructionList({
     setExpanded(new Set())
   }, [])
 
+  const focusLine = useCallback((loc: BindingDef) => {
+    setRefsModal(null)
+    setExpanded((prev) => {
+      if (prev.has(loc.ixIndex)) return prev
+      const next = new Set(prev)
+      next.add(loc.ixIndex)
+      return next
+    })
+    setFlashLine(loc)
+    if (flashLineTimer.current) clearTimeout(flashLineTimer.current)
+    flashLineTimer.current = setTimeout(() => setFlashLine(null), 1300)
+  }, [])
+
   const focusBinding = useCallback(
     (fromIxIndex: number, bindingIndex: number) => {
       const def = resolveBindingDef(instructions, fromIxIndex, bindingIndex)
       if (!def) return
-      setExpanded((prev) => {
-        if (prev.has(def.ixIndex)) return prev
-        const next = new Set(prev)
-        next.add(def.ixIndex)
-        return next
-      })
-      setFlashLine(def)
-      if (flashLineTimer.current) clearTimeout(flashLineTimer.current)
-      flashLineTimer.current = setTimeout(() => setFlashLine(null), 1300)
+      focusLine(def)
     },
-    [instructions],
+    [focusLine, instructions],
+  )
+
+  const onFindRefs = useCallback(
+    (bindingIndex: number, defIx: number, defLine: number) => {
+      const refs = refsForDef(refIndex, defIx, defLine)
+      if (refs.length === 0) return
+      if (refs.length === 1) {
+        focusLine(refs[0]!)
+        return
+      }
+      setRefsModal({ bindingIndex, refs })
+    },
+    [focusLine, refIndex],
   )
 
   return (
@@ -508,27 +551,103 @@ function InstructionList({
                   flashLine={
                     flashLine?.ixIndex === ix.index ? flashLine.lineIndex : null
                   }
+                  refIndex={refIndex}
                   onValueClick={(bindingIndex) =>
                     focusBinding(ix.index, bindingIndex)
                   }
+                  onFindRefs={onFindRefs}
                 />
               )}
             </li>
           )
         })}
       </ol>
+      {refsModal && (
+        <RefsModal
+          bindingIndex={refsModal.bindingIndex}
+          refs={refsModal.refs}
+          onClose={() => setRefsModal(null)}
+          onPick={focusLine}
+        />
+      )}
     </section>
+  )
+}
+
+function RefsModal({
+  bindingIndex,
+  refs,
+  onClose,
+  onPick,
+}: {
+  bindingIndex: number
+  refs: BindingLoc[]
+  onClose: () => void
+  onPick: (loc: BindingLoc) => void
+}) {
+  const { t } = useApp()
+  const label = `$${bindingIndex}`
+  return (
+    <div
+      className="refs-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="refs-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.refsModalTitle(label)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="refs-modal-head">
+          <h3>
+            {t.refsModalTitle(label)}{' '}
+            <span style={{ color: bindingColor(bindingIndex) }}>{label}</span>
+          </h3>
+          <button type="button" className="ghost tiny" onClick={onClose}>
+            {t.refsModalClose}
+          </button>
+        </div>
+        <ul className="refs-modal-list">
+          {refs.map((ref, i) => (
+            <li key={`${ref.ixIndex}-${ref.lineIndex}-${i}`}>
+              <button
+                type="button"
+                className="refs-modal-row"
+                onClick={() => onPick(ref)}
+              >
+                <code className="refs-modal-line">
+                  <BindingColoredText text={ref.line.trim()} />
+                </code>
+                <span className="refs-modal-ix">
+                  {t.refsIxLabel} {ref.ixIndex}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   )
 }
 
 function InstructionBody({
   ix,
   flashLine,
+  refIndex,
   onValueClick,
+  onFindRefs,
 }: {
   ix: ExploredInstruction
   flashLine: number | null
+  refIndex: Map<string, BindingLoc[]>
   onValueClick: (bindingIndex: number) => void
+  onFindRefs: (
+    bindingIndex: number,
+    defIx: number,
+    defLine: number,
+  ) => void
 }) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
@@ -662,20 +781,53 @@ function InstructionBody({
             </p>
           )}
           <ul className="l1-lines">
-            {ix.l1.lines.map((line, i) => (
-              <li
-                key={i}
-                id={`ix-l1-${ix.index}-${i}`}
-                className={flashLine === i ? 'is-flash' : undefined}
-              >
-                <L1LineWithLinks
-                  line={line}
-                  onAcctClick={focusRemainingAccount}
-                  onRangeClick={focusRemainingRange}
-                  onValueClick={onValueClick}
-                />
-              </li>
-            ))}
+            {ix.l1.lines.map((line, i) => {
+              const defHead = /^\$(\d+)\s*←/.exec(line)
+              const bindingIndex = defHead ? Number(defHead[1]) : null
+              const refs =
+                bindingIndex !== null
+                  ? refsForDef(refIndex, ix.index, i)
+                  : []
+              return (
+                <li
+                  key={i}
+                  id={`ix-l1-${ix.index}-${i}`}
+                  className={flashLine === i ? 'is-flash' : undefined}
+                >
+                  <div className="l1-line-row">
+                    <L1LineWithLinks
+                      line={line}
+                      onAcctClick={focusRemainingAccount}
+                      onRangeClick={focusRemainingRange}
+                      onValueClick={onValueClick}
+                    />
+                    {bindingIndex !== null && (
+                      <button
+                        type="button"
+                        className={[
+                          'refs-btn',
+                          refs.length === 0 ? 'is-empty' : '',
+                        ].join(' ')}
+                        disabled={refs.length === 0}
+                        title={
+                          refs.length === 0
+                            ? t.noRefs
+                            : t.findRefs(refs.length)
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onFindRefs(bindingIndex, ix.index, i)
+                        }}
+                      >
+                        {refs.length === 0
+                          ? t.noRefs
+                          : t.findRefs(refs.length)}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ul>
           <details className="l1-raw">
             <summary>{t.argsRaw}</summary>
