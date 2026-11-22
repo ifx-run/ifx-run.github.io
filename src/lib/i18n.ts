@@ -126,6 +126,11 @@ export const copy = {
     annotationExportTitle: 'Download wire + names as JSON',
     annotationImportTitle: 'Open a shared annotation JSON',
     annotationImportError: 'Could not import annotation file.',
+    wireCacheTitle: 'Recent transactions',
+    wireCacheCount: (n: number, max: number) => `${n} / ${max}`,
+    wireCacheOpen: 'Open this transaction',
+    wireCacheRemove: 'Remove from cache',
+    wireCacheAliases: (n: number) => (n === 1 ? '1 name' : `${n} names`),
   },
   zh: {
     brand: 'Ifx',
@@ -233,6 +238,11 @@ export const copy = {
     annotationExportTitle: '下载交易数据与命名为 JSON',
     annotationImportTitle: '打开他人分享的注释 JSON',
     annotationImportError: '无法导入该注释文件。',
+    wireCacheTitle: '最近交易',
+    wireCacheCount: (n: number, max: number) => `${n} / ${max}`,
+    wireCacheOpen: '打开该交易',
+    wireCacheRemove: '从缓存移除',
+    wireCacheAliases: (n: number) => `${n} 个名称`,
   },
 } as const
 

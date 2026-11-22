@@ -149,3 +149,20 @@ export function mergeStoredAliases(
 ): void {
   replaceStoredAliases(wire, { ...getStoredAliases(wire), ...aliases })
 }
+
+/** Drop alias bags whose keys are not in `keep` (LRU wire-cache eviction). */
+export function pruneStoredAliasesToBagKeys(keep: ReadonlySet<string>): void {
+  try {
+    const map = readBag()
+    let changed = false
+    for (const key of Object.keys(map)) {
+      if (!keep.has(key)) {
+        delete map[key]
+        changed = true
+      }
+    }
+    if (changed) writeBag(map)
+  } catch {
+    /* ignore */
+  }
+}

@@ -26,15 +26,23 @@ import {
 } from '../lib/solana/bytes'
 import { getStoredRpcUrl, setStoredRpcUrl } from '../lib/solana/rpc'
 import {
+  activateWireCacheEntry,
   clearStoredWire,
+  getActiveWireCacheId,
   getStoredWire,
+  listWireCache,
+  MAX_WIRE_CACHE,
+  rememberDecodedWire,
+  removeWireCacheEntry,
   setStoredWire,
+  type WireCacheEntry,
 } from '../lib/solana/wire-storage'
 import {
   clearStoredAliases,
   getStoredAliases,
   mergeStoredAliases,
   setStoredAlias,
+  wireAliasBagKey,
 } from '../lib/solana/alias-storage'
 import {
   annotationDownloadName,
@@ -79,10 +87,30 @@ export function ExplorerWorkspace() {
   /** Bumps when aliases change without a wire-key change (e.g. import). */
   const [aliasEpoch, setAliasEpoch] = useState(0)
 
-  const applyResult = useCallback((explored: ExploredTransaction) => {
-    setResult(explored)
-    setIngressExpanded(false)
+  const [wireCache, setWireCache] = useState<WireCacheEntry[]>(() =>
+    listWireCache(),
+  )
+  const [activeCacheId, setActiveCacheId] = useState<string | null>(() =>
+    getActiveWireCacheId(),
+  )
+
+  const refreshWireCache = useCallback(() => {
+    setWireCache(listWireCache())
+    setActiveCacheId(getActiveWireCacheId())
   }, [])
+
+  const applyResult = useCallback(
+    (explored: ExploredTransaction, rawWire: string) => {
+      setResult(explored)
+      setIngressExpanded(false)
+      const wire = rawWire.trim()
+      if (wire) {
+        rememberDecodedWire(wire)
+        refreshWireCache()
+      }
+    },
+    [refreshWireCache],
+  )
 
   const clearResult = useCallback(() => {
     setResult(null)
@@ -104,7 +132,7 @@ export function ExplorerWorkspace() {
       setRpcError(null)
 
       try {
-        applyResult(exploreFromWire(value))
+        applyResult(exploreFromWire(value), value)
       } catch (e) {
         setResult(null)
         if (e instanceof Error) {
@@ -179,7 +207,7 @@ export function ExplorerWorkspace() {
 
     try {
       const explored = await exploreFromWireResolvingAlts(value, rpc, ac.signal)
-      if (!ac.signal.aborted) applyResult(explored)
+      if (!ac.signal.aborted) applyResult(explored, value)
     } catch (e) {
       if (ac.signal.aborted) return
       if (e instanceof Error) {
@@ -203,11 +231,43 @@ export function ExplorerWorkspace() {
       clearTimeout(decodeTimer.current)
       decodeTimer.current = null
     }
-    clearStoredAliases(input)
     clearStoredWire()
     setInput('')
     clearResult()
     setResolving(false)
+    refreshWireCache()
+  }
+
+  function onOpenCachedWire(id: string) {
+    const wire = activateWireCacheEntry(id)
+    if (!wire) {
+      refreshWireCache()
+      return
+    }
+    setInput(wire)
+    setAliasEpoch((n) => n + 1)
+    setError(null)
+    setRpcError(null)
+    refreshWireCache()
+    run(wire)
+  }
+
+  function onRemoveCachedWire(id: string) {
+    const wasActive =
+      activeCacheId === id ||
+      (input.trim() !== '' && wireAliasBagKey(input) === id)
+    removeWireCacheEntry(id)
+    refreshWireCache()
+    if (wasActive) {
+      const next = listWireCache()[0]
+      if (next) {
+        onOpenCachedWire(next.id)
+      } else {
+        setInput('')
+        setStoredWire('')
+        clearResult()
+      }
+    }
   }
 
   function onInputChange(value: string) {
@@ -246,12 +306,13 @@ export function ExplorerWorkspace() {
       const pkg = parseAnnotationJson(text)
       const wire = annotationWireText(pkg)
       mergeStoredAliases(wire, pkg.aliases)
-      setStoredWire(wire)
       setInput(wire)
+      setStoredWire(wire)
       setAliasEpoch((n) => n + 1)
       setError(null)
       setRpcError(null)
       run(wire)
+      refreshWireCache()
     } catch (e) {
       setError(e instanceof Error ? e.message : t.annotationImportError)
     }
@@ -380,6 +441,70 @@ export function ExplorerWorkspace() {
         )}
       </form>
 
+      {wireCache.length > 0 && (
+        <section className="panel wire-cache-panel">
+          <div className="panel-head">
+            <h2>{t.wireCacheTitle}</h2>
+            <span className="wire-cache-count muted">
+              {t.wireCacheCount(wireCache.length, MAX_WIRE_CACHE)}
+            </span>
+          </div>
+          <ul className="wire-cache-list">
+            {wireCache.map((entry) => {
+              const preview = entry.wire.replace(/\s+/g, '')
+              const head = preview.slice(0, 12)
+              const tail =
+                preview.length > 24 ? preview.slice(-12) : ''
+              const aliasCount = Object.keys(getStoredAliases(entry.wire))
+                .length
+              const active = entry.id === activeCacheId
+              return (
+                <li
+                  key={entry.id}
+                  className={[
+                    'wire-cache-item',
+                    active ? 'is-active' : '',
+                  ].join(' ')}
+                >
+                  <button
+                    type="button"
+                    className="wire-cache-open"
+                    title={t.wireCacheOpen}
+                    onClick={() => onOpenCachedWire(entry.id)}
+                  >
+                    <code className="wire-cache-preview">
+                      <span>{head}</span>
+                      {tail ? (
+                        <>
+                          <span className="wire-cache-ellipsis" aria-hidden>
+                            …
+                          </span>
+                          <span>{tail}</span>
+                        </>
+                      ) : null}
+                    </code>
+                    {aliasCount > 0 ? (
+                      <span className="wire-cache-aliases muted">
+                        {t.wireCacheAliases(aliasCount)}
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost tiny wire-cache-remove"
+                    title={t.wireCacheRemove}
+                    aria-label={t.wireCacheRemove}
+                    onClick={() => onRemoveCachedWire(entry.id)}
+                  >
+                    ×
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
+
       {error && (
         <div className="banner error" role="alert">
           <p>{error}</p>
@@ -387,7 +512,7 @@ export function ExplorerWorkspace() {
         </div>
       )}
 
-      {!result && !error && <EmptyState />}
+      {!result && !error && wireCache.length === 0 && <EmptyState />}
 
       {result && (
         <div className="result-grid">
