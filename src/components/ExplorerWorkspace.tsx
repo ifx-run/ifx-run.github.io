@@ -938,6 +938,10 @@ function InstructionList({
                   onValueClick={(bindingIndex) =>
                     focusBinding(ix.index, bindingIndex)
                   }
+                  onRenameBinding={(bindingIndex) => {
+                    if (!frameAddr) return
+                    openRenameBinding(frameAddr, bindingIndex, ix.index)
+                  }}
                   onFindRefs={onFindRefs}
                   onRenameAddress={openRenameAddress}
                   onClearAddress={(address) => clearAliasKey(address)}
@@ -1435,6 +1439,7 @@ function InstructionBody({
   aliases,
   labelFor,
   onValueClick,
+  onRenameBinding,
   onFindRefs,
   onRenameAddress,
   onClearAddress,
@@ -1445,6 +1450,7 @@ function InstructionBody({
   aliases: Record<string, string>
   labelFor: (index: number) => string
   onValueClick: (bindingIndex: number) => void
+  onRenameBinding: (bindingIndex: number) => void
   onFindRefs: (
     bindingIndex: number,
     defIx: number,
@@ -1609,9 +1615,11 @@ function InstructionBody({
                       line={line}
                       labelFor={labelFor}
                       addressLabelFor={(addr) => aliases[addr] || addr}
+                      defBindingIndex={bindingIndex}
                       onAcctClick={focusRemainingAccount}
                       onRangeClick={focusRemainingRange}
                       onValueClick={onValueClick}
+                      onRenameBinding={onRenameBinding}
                       onAddressClick={(addr) =>
                         window.open(
                           solscanAccountUrl(addr, ix.ifxCluster),
@@ -1704,18 +1712,23 @@ function L1LineWithLinks({
   line,
   labelFor,
   addressLabelFor,
+  defBindingIndex,
   onAcctClick,
   onRangeClick,
   onValueClick,
+  onRenameBinding,
   onAddressClick,
   onAddressRename,
 }: {
   line: string
   labelFor: (index: number) => string
   addressLabelFor: (address: string) => string
+  /** When set, the leading `$N ←` binding opens rename instead of jump-to-def. */
+  defBindingIndex?: number | null
   onAcctClick: (index: number) => void
   onRangeClick: (start: number, len: number) => void
   onValueClick: (bindingIndex: number) => void
+  onRenameBinding?: (bindingIndex: number) => void
   onAddressClick: (address: string) => void
   onAddressRename: (address: string) => void
 }) {
@@ -1750,16 +1763,22 @@ function L1LineWithLinks({
     } else if (m[3] !== undefined) {
       const idx = Number(m[3])
       const label = labelFor(idx)
+      const isDefSite =
+        onRenameBinding != null &&
+        defBindingIndex != null &&
+        idx === defBindingIndex &&
+        m.index === 0
       nodes.push(
         <button
           key={key++}
           type="button"
           className="value-ref"
-          title={`$${idx}`}
+          title={isDefSite ? t.frameRenameTitle : `$${idx}`}
           style={{ color: bindingColor(idx) }}
           onClick={(e) => {
             e.stopPropagation()
-            onValueClick(idx)
+            if (isDefSite) onRenameBinding(idx)
+            else onValueClick(idx)
           }}
         >
           {label}
