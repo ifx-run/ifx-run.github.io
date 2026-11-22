@@ -386,10 +386,7 @@ function resolveBindingDef(
   return defs.get(bindingIndex) ?? null
 }
 
-function defaultExpanded(instructions: ExploredInstruction[]): Set<number> {
-  const firstIfx = instructions.find((i) => i.isIfx)
-  if (firstIfx) return new Set([firstIfx.index])
-  if (instructions[0]) return new Set([instructions[0].index])
+function defaultExpanded(_instructions: ExploredInstruction[]): Set<number> {
   return new Set()
 }
 
