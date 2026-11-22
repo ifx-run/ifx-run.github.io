@@ -3,8 +3,8 @@
 Official **Ifx** site: a pure-frontend **transaction explorer** (+ synced docs) for the on-chain Solana orchestration program.
 
 - Product / program: [github.com/ifx-run/ifx](https://github.com/ifx-run/ifx)
-- Site repo: [github.com/ifx-run/ifx-run](https://github.com/ifx-run/ifx-run)
-- Custom domain: **https://ifx.run** (GitHub Pages)
+- Site repo (org Pages): [github.com/ifx-run/ifx-run.github.io](https://github.com/ifx-run/ifx-run.github.io)
+- Live: **https://ifx-run.github.io/** · custom domain **https://ifx.run**
 
 This is a **toolbench**, not a marketing landing page. Default route `/` is the Explorer.
 
@@ -86,10 +86,8 @@ First public allowlist: design, glossary, implementation, frame-authority, bundl
    - Enable **Enforce HTTPS** after DNS propagates
 2. Workflow: [`.github/workflows/pages.yml`](./.github/workflows/pages.yml) builds on `main` and deploys `dist/`
 3. `public/CNAME` contains `ifx.run` (Vite copies it into `dist/`)
-4. **Vite `base`:** until the custom domain is live, the site is served at
-   `https://ifx-run.github.io/ifx-run/` so the default build uses `base: /ifx-run/`.
-   After DNS + Pages custom domain `ifx.run` work, rebuild with `VITE_BASE=/`
-   (set in the Pages workflow env) so asset URLs are root-absolute.
+4. **Vite `base` is `/`** — this repo is the org site (`ifx-run.github.io`), so
+   `https://ifx-run.github.io/` and `https://ifx.run/` both use root-absolute assets.
 
 ### DNS (manual)
 
