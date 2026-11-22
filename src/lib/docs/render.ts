@@ -16,7 +16,7 @@ const SLUGS = new Set(DOC_ENTRIES.map((d) => d.slug))
  * Rewrite relative markdown links:
  * - `./foo.md` / `docs/foo.md` → `/docs/foo?lang=en`
  * - `./foo.zh-CN.md` → `/docs/foo?lang=zh`
- * - `README.md` → `/docs/readme`
+ * - `README.md` / `README.zh-CN.md` → `/docs/readme`
  * - otherwise → GitHub blob URL
  */
 export function rewriteDocLinks(md: string): string {

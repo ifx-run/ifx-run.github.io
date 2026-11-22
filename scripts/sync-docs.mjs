@@ -33,7 +33,7 @@ if (!ref || !Array.isArray(allowlist) || allowlist.length === 0) {
 
 /** Map allowlist entry → path inside the ifx repo. */
 function sourcePath(entry) {
-  if (/^readme\.md$/i.test(entry)) return 'README.md'
+  if (/^readme(\.zh-CN)?\.md$/i.test(entry)) return entry.replace(/^readme/i, 'README')
   if (entry.includes('/')) return entry
   return `docs/${entry}`
 }
@@ -41,6 +41,7 @@ function sourcePath(entry) {
 /** Flatten into content/docs; normalize README casing for the site slug. */
 function destFileName(entry) {
   const base = basename(entry)
+  if (/^readme\.zh-CN\.md$/i.test(base)) return 'readme.zh-CN.md'
   if (/^readme\.md$/i.test(base)) return 'readme.md'
   return base
 }

@@ -4,6 +4,7 @@
   "note": "Pin a tag (e.g. v0.1.3) or commit SHA. CI / prebuild syncs only the allowlist below.",
   "allowlist": [
     "README.md",
+    "README.zh-CN.md",
     "design.md",
     "design.zh-CN.md",
     "glossary.md",
