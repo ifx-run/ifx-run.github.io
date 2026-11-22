@@ -19,6 +19,10 @@ import {
   type WireEncoding,
   shortenAddress,
 } from './bytes'
+import {
+  fetchLoadedAddresses,
+  type LoadedAddresses,
+} from './fetch-alts'
 
 export type PacketVersion = 'legacy' | 0 | 1
 
@@ -63,9 +67,20 @@ export type ExploredInstruction = {
 export type ExploredTransaction = {
   source: 'wire'
   encoding: WireEncoding
+  /** True when the tx references ALTs and accounts are not fully resolved yet. */
+  needsAltRpc: boolean
+  /** True after ALT accounts were fetched (or when there are no ALTs). */
+  altResolved: boolean
   packet: PacketMeta
   instructions: ExploredInstruction[]
   decoderNote: string
+}
+
+type DecodedWire = {
+  encoding: WireEncoding
+  bytes: Uint8Array
+  compiled: CompiledTransactionMessage
+  messageByteLength: number
 }
 
 function versionLabel(v: CompiledTransactionMessage['version']): PacketVersion {
@@ -75,21 +90,32 @@ function versionLabel(v: CompiledTransactionMessage['version']): PacketVersion {
   return 'legacy'
 }
 
+function extractLookups(compiled: CompiledTransactionMessage): {
+  altCount: number
+  altAddresses: string[]
+} {
+  if (
+    'addressTableLookups' in compiled &&
+    Array.isArray(compiled.addressTableLookups) &&
+    compiled.addressTableLookups.length > 0
+  ) {
+    const lookups = compiled.addressTableLookups
+    return {
+      altCount: lookups.length,
+      altAddresses: lookups.map((l) => String(l.lookupTableAddress)),
+    }
+  }
+  return { altCount: 0, altAddresses: [] }
+}
+
 function extractPacketMeta(
   compiled: CompiledTransactionMessage,
   wireLen: number,
   messageLen: number,
 ): PacketMeta {
   const version = versionLabel(compiled.version)
-  let altCount = 0
-  let altAddresses: string[] = []
+  const { altCount, altAddresses } = extractLookups(compiled)
   let v1Header: V1HeaderInfo | undefined
-
-  if (compiled.version === 0 && 'addressTableLookups' in compiled) {
-    const lookups = compiled.addressTableLookups ?? []
-    altCount = lookups.length
-    altAddresses = lookups.map((l) => String(l.lookupTableAddress))
-  }
 
   if (compiled.version === 1) {
     const cfg = decompileTransactionConfig(
@@ -129,10 +155,7 @@ function extractPacketMeta(
 
 function mapInstructions(
   compiled: CompiledTransactionMessage,
-  loadedAddresses?: {
-    writable: readonly Address[]
-    readonly: readonly Address[]
-  } | null,
+  loadedAddresses?: LoadedAddresses | null,
 ): ExploredInstruction[] {
   const resolved = getInstructionsFromCompiledTransactionMessage(
     compiled,
@@ -194,11 +217,17 @@ function mapInstructions(
   })
 }
 
-const DECODER_NOTE =
-  'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 disc map · args L1 TBD · offline wire only'
+function decoderNote(altResolved: boolean, needsAltRpc: boolean): string {
+  if (needsAltRpc) {
+    return 'decoder: wire decoded offline · ALT accounts unresolved — provide RPC to finish'
+  }
+  if (altResolved) {
+    return 'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 · ALT resolved via RPC'
+  }
+  return 'decoder: @solana/kit (SIMD-0385 v1) + Ifx L0 disc map · offline wire only'
+}
 
-/** Parse pasted wire (base58 or base64) entirely in-browser — no RPC. */
-export function exploreFromWire(raw: string): ExploredTransaction {
+function decodeWireToCompiled(raw: string): DecodedWire {
   const candidates = decodeWireCandidates(raw)
   let lastError: unknown
 
@@ -208,19 +237,11 @@ export function exploreFromWire(raw: string): ExploredTransaction {
       const compiled = getCompiledTransactionMessageDecoder().decode(
         tx.messageBytes,
       )
-      const packet = extractPacketMeta(
-        compiled,
-        bytes.byteLength,
-        tx.messageBytes.byteLength,
-      )
-      const instructions = mapInstructions(compiled)
-
       return {
-        source: 'wire',
         encoding,
-        packet,
-        instructions,
-        decoderNote: DECODER_NOTE,
+        bytes,
+        compiled,
+        messageByteLength: tx.messageBytes.byteLength,
       }
     } catch (e) {
       lastError = e
@@ -235,3 +256,74 @@ export function exploreFromWire(raw: string): ExploredTransaction {
       : 'could not decode as a Solana transaction',
   )
 }
+
+function buildExplored(
+  decoded: DecodedWire,
+  loadedAddresses: LoadedAddresses | null,
+  opts: { altResolved: boolean; needsAltRpc: boolean },
+): ExploredTransaction {
+  const packet = extractPacketMeta(
+    decoded.compiled,
+    decoded.bytes.byteLength,
+    decoded.messageByteLength,
+  )
+
+  let instructions: ExploredInstruction[] = []
+  if (!opts.needsAltRpc) {
+    instructions = mapInstructions(decoded.compiled, loadedAddresses)
+  }
+
+  return {
+    source: 'wire',
+    encoding: decoded.encoding,
+    needsAltRpc: opts.needsAltRpc,
+    altResolved: opts.altResolved,
+    packet,
+    instructions,
+    decoderNote: decoderNote(opts.altResolved, opts.needsAltRpc),
+  }
+}
+
+/** Parse pasted wire (base58 or base64). No network — ALT txs return needsAltRpc. */
+export function exploreFromWire(raw: string): ExploredTransaction {
+  const decoded = decodeWireToCompiled(raw)
+  const { altCount } = extractLookups(decoded.compiled)
+
+  if (altCount > 0) {
+    return buildExplored(decoded, null, {
+      altResolved: false,
+      needsAltRpc: true,
+    })
+  }
+
+  return buildExplored(decoded, null, {
+    altResolved: true,
+    needsAltRpc: false,
+  })
+}
+
+/** Re-decode wire and fetch ALT accounts from RPC to resolve instruction accounts. */
+export async function exploreFromWireResolvingAlts(
+  raw: string,
+  rpcUrl: string,
+  signal?: AbortSignal,
+): Promise<ExploredTransaction> {
+  const decoded = decodeWireToCompiled(raw)
+  const { altCount } = extractLookups(decoded.compiled)
+
+  if (altCount === 0) {
+    return buildExplored(decoded, null, {
+      altResolved: true,
+      needsAltRpc: false,
+    })
+  }
+
+  const loaded = await fetchLoadedAddresses(decoded.compiled, rpcUrl, signal)
+  return buildExplored(decoded, loaded, {
+    altResolved: true,
+    needsAltRpc: false,
+  })
+}
+
+// Re-export for callers that type against Address lists
+export type { Address }

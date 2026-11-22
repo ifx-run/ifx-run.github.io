@@ -507,6 +507,47 @@ textarea {
   color: var(--muted);
 }
 
+.alt-rpc-panel {
+  grid-column: 1 / -1;
+}
+.alt-rpc-why {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  max-width: 62ch;
+}
+.alt-rpc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.alt-rpc-row label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.rpc-input {
+  flex: 1 1 220px;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.45rem 0.65rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+.rpc-input:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.alt-rpc-error {
+  margin: 0;
+  color: #f0c0c0;
+  font-size: 0.88rem;
+}
+
 .banner {
   border-radius: var(--radius);
   padding: 0.85rem 1rem;

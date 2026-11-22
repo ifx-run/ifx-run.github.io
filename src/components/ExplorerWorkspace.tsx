@@ -1,6 +1,7 @@
 import {
   useCallback,
   useId,
+  useRef,
   useState,
   type FormEvent,
   type KeyboardEvent,
@@ -9,33 +10,45 @@ import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import {
   exploreFromWire,
+  exploreFromWireResolvingAlts,
   type ExploredInstruction,
   type ExploredTransaction,
 } from '../lib/solana/parse-tx'
 import { shortenAddress } from '../lib/solana/bytes'
+import { getStoredRpcUrl, setStoredRpcUrl } from '../lib/solana/rpc'
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
   const inputId = useId()
+  const rpcId = useId()
+  const abortRef = useRef<AbortController | null>(null)
 
   const [input, setInput] = useState('')
+  const [rpcDraft, setRpcDraft] = useState(() => getStoredRpcUrl())
   const [result, setResult] = useState<ExploredTransaction | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [rpcError, setRpcError] = useState<string | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
+  const [resolving, setResolving] = useState(false)
+
+  const applyResult = useCallback((explored: ExploredTransaction) => {
+    setResult(explored)
+    const firstIfx = explored.instructions.findIndex((i) => i.isIfx)
+    setSelected(firstIfx >= 0 ? firstIfx : explored.instructions.length ? 0 : null)
+  }, [])
 
   const run = useCallback(
     (raw: string) => {
       const value = raw.trim()
       if (!value) return
 
+      abortRef.current?.abort()
       setError(null)
+      setRpcError(null)
       setSelected(null)
 
       try {
-        const explored = exploreFromWire(value)
-        setResult(explored)
-        const firstIfx = explored.instructions.findIndex((i) => i.isIfx)
-        setSelected(firstIfx >= 0 ? firstIfx : 0)
+        applyResult(exploreFromWire(value))
       } catch (e) {
         setResult(null)
         if (e instanceof Error) {
@@ -45,8 +58,36 @@ export function ExplorerWorkspace() {
         }
       }
     },
-    [t],
+    [applyResult, t],
   )
+
+  const resolveAlts = useCallback(async () => {
+    const value = input.trim()
+    const rpc = rpcDraft.trim()
+    if (!value || !rpc) return
+
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+
+    setStoredRpcUrl(rpc)
+    setResolving(true)
+    setRpcError(null)
+
+    try {
+      const explored = await exploreFromWireResolvingAlts(value, rpc, ac.signal)
+      if (!ac.signal.aborted) applyResult(explored)
+    } catch (e) {
+      if (ac.signal.aborted) return
+      if (e instanceof Error) {
+        setRpcError(e.message)
+      } else {
+        setRpcError(t.errorGeneric)
+      }
+    } finally {
+      if (!ac.signal.aborted) setResolving(false)
+    }
+  }, [applyResult, input, rpcDraft, t])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -59,6 +100,8 @@ export function ExplorerWorkspace() {
       run(input)
     }
   }
+
+  const showAltRpc = Boolean(result?.needsAltRpc)
 
   return (
     <div className="workspace">
@@ -82,7 +125,7 @@ export function ExplorerWorkspace() {
           </button>
           <span className="kbd-hint">⌘/Ctrl + Enter</span>
         </div>
-        <p className="offline-note">{t.offlineNote}</p>
+        {!showAltRpc && <p className="offline-note">{t.offlineNote}</p>}
       </form>
 
       {error && (
@@ -97,15 +140,58 @@ export function ExplorerWorkspace() {
       {result && (
         <div className="result-grid">
           <PacketPanel result={result} />
-          <InstructionTimeline
-            instructions={result.instructions}
-            selected={selected}
-            onSelect={setSelected}
-          />
-          {selected !== null && result.instructions[selected] && (
-            <InstructionDetail ix={result.instructions[selected]!} />
+
+          {showAltRpc && (
+            <section className="panel alt-rpc-panel" aria-live="polite">
+              <h2>{t.altRpcTitle}</h2>
+              <p className="alt-rpc-why">{t.altRpcWhy}</p>
+              <div className="alt-rpc-row">
+                <label htmlFor={rpcId}>{t.rpcLabel}</label>
+                <input
+                  id={rpcId}
+                  className="rpc-input"
+                  value={rpcDraft}
+                  onChange={(e) => setRpcDraft(e.target.value)}
+                  spellCheck={false}
+                  placeholder="https://…"
+                  disabled={resolving}
+                />
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={resolving || !rpcDraft.trim()}
+                  onClick={() => void resolveAlts()}
+                >
+                  {resolving ? t.altRpcLoading : t.altRpcResolve}
+                </button>
+              </div>
+              {rpcError && (
+                <p className="alt-rpc-error" role="alert">
+                  {rpcError}
+                </p>
+              )}
+            </section>
           )}
-          <p className="decoder-note">{result.decoderNote}</p>
+
+          {result.altResolved && result.instructions.length > 0 && (
+            <>
+              <InstructionTimeline
+                instructions={result.instructions}
+                selected={selected}
+                onSelect={setSelected}
+              />
+              {selected !== null && result.instructions[selected] && (
+                <InstructionDetail ix={result.instructions[selected]!} />
+              )}
+            </>
+          )}
+
+          {showAltRpc && (
+            <p className="decoder-note">{t.altRpcPendingNote}</p>
+          )}
+          {!showAltRpc && (
+            <p className="decoder-note">{result.decoderNote}</p>
+          )}
         </div>
       )}
     </div>
@@ -159,6 +245,12 @@ function PacketPanel({ result }: { result: ExploredTransaction }) {
             {packet.altCount === 0
               ? '—'
               : packet.altAddresses.map((a) => shortenAddress(a)).join(', ')}
+            {result.needsAltRpc && (
+              <span className="muted"> · {t.altUnresolved}</span>
+            )}
+            {result.altResolved && packet.altCount > 0 && (
+              <span className="muted"> · {t.altResolved}</span>
+            )}
           </dd>
         </div>
         {packet.v1Header && (

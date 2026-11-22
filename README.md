@@ -28,11 +28,14 @@ npm run build
 npm run preview
 ```
 
-No secrets or RPC endpoints are required. The explorer never calls the network.
+No secrets are required. The explorer stays offline unless a pasted wire uses Address Lookup Tables (see below).
 
 ## Explorer (MVP)
 
-**Offline wire only.** Paste the full transaction bytes as **base58** or **base64**. There is no signature lookup and no RPC.
+**Wire paste (base58 / base64).** No signature lookup. Decode runs in the browser.
+
+- **No ALT** → fully offline; nothing is sent to an RPC.
+- **Has ALT** → packet meta still decodes offline; an RPC URL panel appears so you can fetch ALT account contents and finish resolving instruction accounts. Without RPC, the timeline stays hidden.
 
 Outputs:
 
@@ -42,7 +45,7 @@ Outputs:
 
 Decoder stack: `@solana/kit` (SIMD-0385 v1-capable) + local L0 disc map aligned with `@ifx-run/sdk` `decodeIfxInstruction`. **L1 args / L2 SSA / L3 logs** are planned next — not in MVP.
 
-This site is **read-only** (parse / display). It does not fetch chain state, upgrade packets to v1, or compose / send transactions.
+This site is **read-only** (parse / display). It does not upgrade packets to v1 or compose / send transactions.
 
 ## Docs sync
 
