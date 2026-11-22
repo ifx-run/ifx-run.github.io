@@ -1,12 +1,15 @@
 :root {
-  --bg: #0e1114;
-  --bg-elev: #161b20;
-  --bg-hover: #1c232a;
-  --line: #2a333c;
-  --text: #d7dde3;
-  --muted: #8b969f;
+  --bg: #121418;
+  --bg-elev: #1a1e24;
+  --bg-hover: #22272e;
+  --line: #2e353e;
+  --text: #e6e8ea;
+  --muted: #8f97a0;
   --accent: #3dba9a;
   --accent-dim: #2a7a66;
+  --ink: #0a2f2a;
+  --ink-soft: #12443c;
+  --paper: #e8ece9;
   --ifx: #5ec4a8;
   --ifx-bg: rgba(62, 186, 154, 0.12);
   --danger: #e07070;
@@ -34,10 +37,8 @@ body,
 body {
   margin: 0;
   font-family: var(--font);
-  background:
-    radial-gradient(1200px 600px at 10% -10%, #1a2a28 0%, transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, #1a2230 0%, transparent 50%),
-    var(--bg);
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   color: var(--text);
   line-height: 1.45;
 }
@@ -74,7 +75,7 @@ textarea {
   gap: 1rem;
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--line);
-  background: rgba(14, 17, 20, 0.85);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
@@ -84,7 +85,7 @@ textarea {
 .logo {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   letter-spacing: -0.03em;
   color: var(--text);
   text-decoration: none;
@@ -99,19 +100,21 @@ textarea {
   align-items: center;
   gap: 0.85rem;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .topbar-nav a {
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-family: var(--mono);
 }
 .topbar-nav a:hover,
 .topbar-nav a.active {
   color: var(--text);
 }
 .topbar-nav a.active {
-  box-shadow: inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -1px 0 var(--accent);
 }
 
 .main {
@@ -120,115 +123,236 @@ textarea {
   padding: 1.25rem 1.25rem 2.5rem;
 }
 
-/* —— Home hero —— */
-.home-hero {
+/* —— Home: editorial ink slab —— */
+.shell-home {
+  background: var(--bg);
+}
+
+.shell-home .topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  padding: 1.15rem 1.5rem;
+}
+
+.shell-home .topbar-nav a {
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+.shell-home .topbar-nav a:hover,
+.shell-home .topbar-nav a.active {
+  color: var(--paper);
+}
+.shell-home .topbar-nav a.active {
+  box-shadow: inset 0 -1px 0 var(--accent);
+}
+.shell-home .ghost {
+  border-color: color-mix(in srgb, var(--paper) 28%, transparent);
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+.shell-home .ghost:hover {
+  color: var(--paper);
+  border-color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.main-home {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(9rem, 34vw) minmax(0, 1fr);
+}
+
+.home-slab {
   position: relative;
-  min-height: calc(100vh - 9.5rem);
+  background: var(--ink);
+  overflow: hidden;
+  /* intentional hard edge — flat ink, not a soft glow */
+  border-right: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.home-slab-marks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 18vh 0;
+  font-family: var(--mono);
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 22%, transparent);
+  user-select: none;
+  pointer-events: none;
+}
+.home-slab-marks span {
+  display: block;
+  padding-left: 8%;
+  white-space: nowrap;
+  animation: home-mark-in 0.9s ease both;
+}
+.home-slab-marks span:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.home-slab-marks span:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.home-slab-marks span:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+@keyframes home-mark-in {
+  from {
+    opacity: 0;
+    transform: translateX(-0.6rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.home-copy {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-width: 40rem;
-  padding: 2rem 0 3rem;
+  padding: clamp(5.5rem, 12vh, 7rem) clamp(1.4rem, 5vw, 4rem)
+    clamp(2rem, 6vh, 3.5rem);
+  max-width: 38rem;
+  animation: home-copy-in 0.7s ease 0.12s both;
 }
 
-.home-hero-glow {
-  position: absolute;
-  inset: 10% -20% auto;
-  height: 280px;
-  background:
-    radial-gradient(ellipse at 20% 40%, rgba(61, 186, 154, 0.18), transparent 55%),
-    radial-gradient(ellipse at 80% 20%, rgba(110, 201, 255, 0.08), transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.home-hero > *:not(.home-hero-glow) {
-  position: relative;
-  z-index: 1;
+@keyframes home-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .home-kicker {
-  margin: 0 0 0.75rem;
+  margin: 0 0 1rem;
   font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
 .home-brand {
-  margin: 0 0 1.1rem;
+  margin: 0 0 1.35rem;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(3.6rem, 12vw, 6.5rem);
-  line-height: 0.92;
-  letter-spacing: -0.045em;
-  color: var(--text);
+  font-size: clamp(4.2rem, 14vw, 7.2rem);
+  line-height: 0.88;
+  letter-spacing: -0.05em;
+}
+
+.home-brand-ink {
+  display: inline-block;
+  color: var(--paper);
+  /* brand straddles the ink slab: half pulls left into the field */
+  margin-left: clamp(-4.5rem, -9vw, -2rem);
+  padding: 0.08em 0.12em 0.1em 0;
+  background: linear-gradient(
+    90deg,
+    var(--ink) 0%,
+    var(--ink) 42%,
+    transparent 42%
+  );
 }
 
 .home-headline {
-  margin: 0 0 0.75rem;
-  font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+  margin: 0 0 0.85rem;
+  font-size: clamp(1.12rem, 2.2vw, 1.38rem);
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--text);
-  max-width: 34rem;
+  text-wrap: pretty;
 }
 
 .home-support {
-  margin: 0 0 1.75rem;
-  font-size: 0.98rem;
-  line-height: 1.5;
+  margin: 0 0 2rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
   color: var(--muted);
-  max-width: 34rem;
+  text-wrap: pretty;
 }
 
 .home-ctas {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
 }
 
 .cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 10.5rem;
-  padding: 0.85rem 1.35rem;
-  border-radius: var(--radius);
+  gap: 0.45rem;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   text-decoration: none;
-  transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+  border-radius: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .cta:hover {
   text-decoration: none;
-  transform: translateY(-1px);
 }
 
 .cta-primary {
-  background: var(--accent);
-  color: #062019;
-  border: 1px solid transparent;
+  min-width: 10rem;
+  padding: 0.9rem 1.4rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper);
 }
 .cta-primary:hover {
-  filter: brightness(1.06);
-  color: #062019;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
 }
 
 .cta-secondary {
+  padding: 0.55rem 0;
   background: transparent;
   color: var(--text);
-  border: 1px solid var(--line);
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  border-radius: 0;
 }
 .cta-secondary:hover {
-  border-color: var(--accent-dim);
   color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.cta-arrow {
+  font-family: var(--mono);
+  transition: transform 0.15s ease;
+}
+.cta-secondary:hover .cta-arrow {
+  transform: translateX(3px);
 }
 
 .home-foot {
-  margin: 2rem 0 0;
-  font-size: 0.85rem;
+  margin: 2.4rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
   color: var(--muted);
 }
 .home-foot a {
@@ -236,6 +360,34 @@ textarea {
 }
 .home-foot a:hover {
   color: var(--accent);
+}
+.home-foot-sep {
+  width: 1px;
+  height: 0.85em;
+  background: var(--line);
+}
+
+@media (max-width: 760px) {
+  .home {
+    grid-template-columns: 1fr;
+    grid-template-rows: 7.5rem 1fr;
+  }
+  .home-slab-marks {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 0 1.1rem 1rem;
+    font-size: 1.35rem;
+  }
+  .home-brand-ink {
+    margin-left: 0;
+    background: none;
+    color: var(--text);
+  }
+  .home-copy {
+    padding-top: 1.75rem;
+  }
 }
 
 .footer {
