@@ -110,6 +110,10 @@ export const copy = {
     frameRenameCancel: 'Cancel',
     frameClearName: 'Clear name',
     frameClearAllNames: 'Clear all names',
+    frameClearAllNamesConfirmTitle: 'Clear all names?',
+    frameClearAllNamesConfirmBody:
+      'This removes every custom binding name for this wire. Addresses keep their names. This cannot be undone.',
+    frameClearAllNamesConfirm: 'Clear all',
     addressRenameTitle: 'Rename address',
     addressRenamePrompt: 'Name for this address (empty = show address)',
     addressCopy: 'Copy',
@@ -207,6 +211,10 @@ export const copy = {
     frameRenameCancel: '取消',
     frameClearName: '清除名称',
     frameClearAllNames: '清除全部名称',
+    frameClearAllNamesConfirmTitle: '清除全部名称？',
+    frameClearAllNamesConfirmBody:
+      '将清除本笔交易数据下所有自定义变量名。地址名称保留。此操作不可撤销。',
+    frameClearAllNamesConfirm: '全部清除',
     addressRenameTitle: '重命名地址',
     addressRenamePrompt: '为该地址命名（留空则显示原地址）',
     addressCopy: '复制',

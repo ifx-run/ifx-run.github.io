@@ -569,6 +569,24 @@ textarea {
 .primary:hover:not(:disabled) {
   filter: brightness(1.05);
 }
+.danger {
+  background: var(--danger);
+  color: #1a1010;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.confirm-modal-body {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
 
 .ghost {
   background: transparent;

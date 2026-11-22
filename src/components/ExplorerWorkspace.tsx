@@ -590,6 +590,7 @@ function InstructionList({
     | { kind: 'address'; address: string }
     | null
   >(null)
+  const [clearAllNamesOpen, setClearAllNamesOpen] = useState(false)
   const [aliases, setAliases] = useState<Record<string, string>>(() =>
     getStoredAliases(wireKey),
   )
@@ -600,6 +601,7 @@ function InstructionList({
     setFlashLine(null)
     setRefsModal(null)
     setRenameModal(null)
+    setClearAllNamesOpen(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultKey])
 
@@ -733,6 +735,7 @@ function InstructionList({
       clearStoredAliases(wireKey)
     }
     refreshAliases()
+    setClearAllNamesOpen(false)
   }, [refreshAliases, wireKey])
 
   const labelFor = useCallback(
@@ -757,7 +760,7 @@ function InstructionList({
               <button
                 type="button"
                 className="ghost tiny"
-                onClick={clearAllBindingNames}
+                onClick={() => setClearAllNamesOpen(true)}
               >
                 {t.frameClearAllNames}
               </button>
@@ -908,6 +911,88 @@ function InstructionList({
           onClose={() => setRenameModal(null)}
         />
       )}
+      {clearAllNamesOpen && (
+        <ConfirmModal
+          title={t.frameClearAllNamesConfirmTitle}
+          body={t.frameClearAllNamesConfirmBody}
+          confirmLabel={t.frameClearAllNamesConfirm}
+          cancelLabel={t.frameRenameCancel}
+          danger
+          onConfirm={clearAllBindingNames}
+          onClose={() => setClearAllNamesOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function ConfirmModal({
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  danger,
+  onConfirm,
+  onClose,
+}: {
+  title: string
+  body: string
+  confirmLabel: string
+  cancelLabel: string
+  danger?: boolean
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  const confirmRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    confirmRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="refs-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="refs-modal rename-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="refs-modal-head">
+          <h3 id="confirm-modal-title">{title}</h3>
+          <button type="button" className="ghost tiny" onClick={onClose}>
+            {cancelLabel}
+          </button>
+        </div>
+        <div className="rename-modal-body">
+          <p className="confirm-modal-body">{body}</p>
+          <div className="rename-modal-actions">
+            <button type="button" className="ghost" onClick={onClose}>
+              {cancelLabel}
+            </button>
+            <button
+              ref={confirmRef}
+              type="button"
+              className={danger ? 'danger' : 'primary'}
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
