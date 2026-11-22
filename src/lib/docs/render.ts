@@ -14,7 +14,9 @@ const SLUGS = new Set(DOC_ENTRIES.map((d) => d.slug))
 
 /**
  * Rewrite relative markdown links:
- * - `./foo.md` / `foo.md` / `foo.zh-CN.md` → `/docs/foo` when allowlisted
+ * - `./foo.md` → `/docs/foo?lang=en`
+ * - `./foo.zh-CN.md` → `/docs/foo?lang=zh`
+ *   (so in-doc English|中文 switchers and cross-links keep language)
  * - otherwise → GitHub blob URL
  * - keep http(s) and hash-only links
  */
@@ -32,12 +34,15 @@ export function rewriteDocLinks(md: string): string {
         return full
       }
 
-      const [pathPart, hash = ''] = trimmed.split('#')
+      const hashIdx = trimmed.indexOf('#')
+      const pathPart = hashIdx >= 0 ? trimmed.slice(0, hashIdx) : trimmed
+      const hash = hashIdx >= 0 ? trimmed.slice(hashIdx + 1) : ''
       const file = pathPart.replace(/^\.\//, '').replace(/^\//, '')
       if (!file.endsWith('.md')) {
         return `[${label}](${GITHUB_DOCS}${file}${hash ? `#${hash}` : ''})`
       }
 
+      const isZh = /\.zh-CN\.md$/i.test(file)
       const base = file
         .replace(/\.zh-CN\.md$/i, '')
         .replace(/\.md$/i, '')
@@ -45,7 +50,9 @@ export function rewriteDocLinks(md: string): string {
         .pop()!
 
       if (SLUGS.has(base)) {
-        return `[${label}](/docs/${base}${hash ? `#${hash}` : ''})`
+        const lang = isZh ? 'zh' : 'en'
+        const q = `?lang=${lang}`
+        return `[${label}](/docs/${base}${q}${hash ? `#${hash}` : ''})`
       }
       return `[${label}](${GITHUB_DOCS}${file}${hash ? `#${hash}` : ''})`
     },
