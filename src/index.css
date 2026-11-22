@@ -878,10 +878,11 @@ textarea {
 }
 .acct-idx {
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--muted);
   padding-top: 0.15rem;
+  white-space: nowrap;
 }
 .acct-flags {
   display: inline-flex;

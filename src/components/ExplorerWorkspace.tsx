@@ -346,14 +346,19 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
     }
   }, [])
 
-  const focusAccount = useCallback((acctIndex: number) => {
-    if (acctIndex < 0 || acctIndex >= ix.accounts.length) return
-    const el = document.getElementById(`ix-acct-${ix.index}-${acctIndex}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    setFlashAcct(acctIndex)
-    if (flashTimer.current) clearTimeout(flashTimer.current)
-    flashTimer.current = setTimeout(() => setFlashAcct(null), 1200)
-  }, [ix.accounts.length, ix.index])
+  /** L1 `#N` is a remaining_accounts index; frame is always keys[0]. */
+  const focusRemainingAccount = useCallback(
+    (remainingIndex: number) => {
+      const abs = ix.isIfx ? remainingIndex + 1 : remainingIndex
+      if (abs < 0 || abs >= ix.accounts.length) return
+      const el = document.getElementById(`ix-acct-${ix.index}-${abs}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      setFlashAcct(abs)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      flashTimer.current = setTimeout(() => setFlashAcct(null), 1200)
+    },
+    [ix.accounts.length, ix.index, ix.isIfx],
+  )
 
   const namedTitle =
     ix.programLabel && ix.ixLabel
@@ -408,28 +413,44 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
       </dl>
       <h3>{t.accounts}</h3>
       <ul className="acct-list">
-        {ix.accounts.map((a, i) => (
-          <li
-            key={`${a.address}-${i}`}
-            id={`ix-acct-${ix.index}-${i}`}
-            className={flashAcct === i ? 'is-flash' : undefined}
-          >
-            <span className="acct-idx" title={t.accountIndex}>
-              #{i}
-            </span>
-            <span className="acct-flags" aria-label={roleAria(a.role, t)}>
-              {a.role.signer && (
-                <span className="flag flag-signer">{t.accountRoleSigner}</span>
-              )}
-              {a.role.writable ? (
-                <span className="flag flag-writable">{t.accountRoleWritable}</span>
-              ) : (
-                <span className="flag flag-readonly">{t.accountRoleReadonly}</span>
-              )}
-            </span>
-            <code className="break">{a.address}</code>
-          </li>
-        ))}
+        {ix.accounts.map((a, i) => {
+          const idxLabel = ix.isIfx
+            ? i === 0
+              ? t.accountFrame
+              : `#${i - 1}`
+            : `#${i}`
+          const idxTitle = ix.isIfx
+            ? i === 0
+              ? t.accountFrame
+              : t.accountRemainingHint
+            : t.accountIndex
+          return (
+            <li
+              key={`${a.address}-${i}`}
+              id={`ix-acct-${ix.index}-${i}`}
+              className={flashAcct === i ? 'is-flash' : undefined}
+            >
+              <span className="acct-idx" title={idxTitle}>
+                {idxLabel}
+              </span>
+              <span className="acct-flags" aria-label={roleAria(a.role, t)}>
+                {a.role.signer && (
+                  <span className="flag flag-signer">{t.accountRoleSigner}</span>
+                )}
+                {a.role.writable ? (
+                  <span className="flag flag-writable">
+                    {t.accountRoleWritable}
+                  </span>
+                ) : (
+                  <span className="flag flag-readonly">
+                    {t.accountRoleReadonly}
+                  </span>
+                )}
+              </span>
+              <code className="break">{a.address}</code>
+            </li>
+          )
+        })}
         {ix.accounts.length === 0 && <li className="muted">—</li>}
       </ul>
       {ix.l1 && (
@@ -438,7 +459,10 @@ function InstructionDetail({ ix }: { ix: ExploredInstruction }) {
           <ul className="l1-lines">
             {ix.l1.lines.map((line, i) => (
               <li key={i}>
-                <L1LineWithAcctLinks line={line} onAcctClick={focusAccount} />
+                <L1LineWithAcctLinks
+                  line={line}
+                  onAcctClick={focusRemainingAccount}
+                />
               </li>
             ))}
           </ul>
