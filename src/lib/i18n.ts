@@ -91,6 +91,9 @@ export const copy = {
     refsModalTitle: (binding: string) => `References to ${binding}`,
     refsModalClose: 'Close',
     refsIxLabel: 'ix',
+    frameStrip: 'Frame',
+    frameRenamePrompt: 'Name for this binding (empty = $N)',
+    frameRenameTitle: 'Rename binding',
   },
   zh: {
     brand: 'Ifx',
@@ -165,6 +168,9 @@ export const copy = {
     refsModalTitle: (binding: string) => `${binding} 的引用`,
     refsModalClose: '关闭',
     refsIxLabel: '指令',
+    frameStrip: 'Frame',
+    frameRenamePrompt: '为该变量命名（留空则恢复 $N）',
+    frameRenameTitle: '重命名变量',
   },
 } as const
 

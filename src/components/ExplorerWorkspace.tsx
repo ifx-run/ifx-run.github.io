@@ -29,12 +29,22 @@ import {
   getStoredWire,
   setStoredWire,
 } from '../lib/solana/wire-storage'
+import {
+  clearStoredAliases,
+  getStoredAliases,
+  setStoredAlias,
+} from '../lib/solana/alias-storage'
 import { bindingColor } from '../lib/ifx/binding-color'
 import {
   buildBindingRefIndex,
   refsForDef,
   type BindingLoc,
 } from '../lib/ifx/binding-refs'
+import {
+  aliasKey,
+  collectFrameViews,
+  type FrameView,
+} from '../lib/ifx/frame-bindings'
 
 const DATA_ENCODINGS: DataEncoding[] = ['hex', 'base58', 'base64']
 const AUTO_DECODE_MS = 280
@@ -161,6 +171,7 @@ export function ExplorerWorkspace() {
       clearTimeout(decodeTimer.current)
       decodeTimer.current = null
     }
+    clearStoredAliases(input)
     clearStoredWire()
     setInput('')
     clearResult()
@@ -262,7 +273,10 @@ export function ExplorerWorkspace() {
           )}
 
           {result.altResolved && result.instructions.length > 0 && (
-            <InstructionList instructions={result.instructions} />
+            <InstructionList
+              instructions={result.instructions}
+              wireKey={input.trim()}
+            />
           )}
 
           {showAltRpc && (
@@ -397,8 +411,10 @@ type RefsModalState = {
 
 function InstructionList({
   instructions,
+  wireKey,
 }: {
   instructions: ExploredInstruction[]
+  wireKey: string
 }) {
   const { t } = useApp()
   const resultKey = useMemo(
@@ -412,9 +428,16 @@ function InstructionList({
     () => buildBindingRefIndex(instructions),
     [instructions],
   )
+  const frames = useMemo(
+    () => collectFrameViews(instructions),
+    [instructions],
+  )
   const [expanded, setExpanded] = useState(() => defaultExpanded(instructions))
   const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
   const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
+  const [aliases, setAliases] = useState<Record<string, string>>(() =>
+    getStoredAliases(wireKey),
+  )
   const flashLineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -423,6 +446,10 @@ function InstructionList({
     setRefsModal(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultKey])
+
+  useEffect(() => {
+    setAliases(getStoredAliases(wireKey))
+  }, [wireKey, resultKey])
 
   useLayoutEffect(() => {
     if (!flashLine) return
@@ -499,6 +526,26 @@ function InstructionList({
     [focusLine, refIndex],
   )
 
+  const renameBinding = useCallback(
+    (frame: string, index: number) => {
+      const key = aliasKey(frame, index)
+      const current = aliases[key] ?? ''
+      const next = window.prompt(t.frameRenamePrompt, current)
+      if (next === null) return
+      setStoredAlias(wireKey, key, next)
+      setAliases(getStoredAliases(wireKey))
+    },
+    [aliases, t.frameRenamePrompt, wireKey],
+  )
+
+  const labelFor = useCallback(
+    (frame: string | undefined, index: number) => {
+      if (!frame) return `$${index}`
+      return aliases[aliasKey(frame, index)] || `$${index}`
+    },
+    [aliases],
+  )
+
   return (
     <section className="panel timeline-panel">
       <div className="panel-head timeline-toolbar">
@@ -512,9 +559,27 @@ function InstructionList({
           </button>
         </div>
       </div>
+      {frames.length > 0 && (
+        <FrameStrips
+          frames={frames}
+          aliases={aliases}
+          onRename={renameBinding}
+          onJumpDef={(defIx) => {
+            setExpanded((prev) => {
+              const next = new Set(prev)
+              next.add(defIx)
+              return next
+            })
+            document
+              .getElementById(`ix-row-${defIx}`)
+              ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }}
+        />
+      )}
       <ol className="timeline">
         {instructions.map((ix) => {
           const open = expanded.has(ix.index)
+          const frameAddr = ix.isIfx ? ix.accounts[0]?.address : undefined
           return (
             <li
               key={ix.index}
@@ -539,7 +604,10 @@ function InstructionList({
                   {ix.programLabel ?? shortenAddress(ix.programId, 5, 4)}
                 </span>
                 <span className="ix-sum">
-                  <BindingColoredText text={ix.summary} />
+                  <BindingColoredText
+                    text={ix.summary}
+                    labelFor={(n) => labelFor(frameAddr, n)}
+                  />
                 </span>
               </button>
               {open && (
@@ -549,6 +617,7 @@ function InstructionList({
                     flashLine?.ixIndex === ix.index ? flashLine.lineIndex : null
                   }
                   refIndex={refIndex}
+                  labelFor={(n) => labelFor(frameAddr, n)}
                   onValueClick={(bindingIndex) =>
                     focusBinding(ix.index, bindingIndex)
                   }
@@ -563,6 +632,15 @@ function InstructionList({
         <RefsModal
           bindingIndex={refsModal.bindingIndex}
           refs={refsModal.refs}
+          labelFor={(n) => {
+            const frame =
+              frames.length === 1
+                ? frames[0]!.address
+                : instructions.find((ix) =>
+                    ix.l1?.lines.some((line) => line.includes(`$${n}`)),
+                  )?.accounts[0]?.address
+            return labelFor(frame, n)
+          }}
           onClose={() => setRefsModal(null)}
           onPick={focusLine}
         />
@@ -571,19 +649,79 @@ function InstructionList({
   )
 }
 
+function FrameStrips({
+  frames,
+  aliases,
+  onRename,
+  onJumpDef,
+}: {
+  frames: FrameView[]
+  aliases: Record<string, string>
+  onRename: (frame: string, index: number) => void
+  onJumpDef: (defIx: number) => void
+}) {
+  const { t } = useApp()
+  return (
+    <div className="frame-strips">
+      {frames.map((frame) => (
+        <div key={frame.address} className="frame-strip">
+          <div className="frame-strip-label" title={frame.address}>
+            {t.frameStrip}{' '}
+            <code>{shortenAddress(frame.address, 4, 4)}</code>
+          </div>
+          <div className="frame-strip-vars" role="list">
+            {frame.vars.map((v) => {
+              const key = aliasKey(frame.address, v.index)
+              const name = aliases[key]
+              const color = bindingColor(v.index)
+              return (
+                <button
+                  key={v.index}
+                  type="button"
+                  role="listitem"
+                  className="frame-var"
+                  style={{
+                    borderColor: color,
+                    background: `color-mix(in srgb, ${color} 16%, transparent)`,
+                    color,
+                  }}
+                  title={`${name ? `${name} · ` : ''}$${v.index} · ${v.ty} · ${v.kind}\n${t.frameRenameTitle}`}
+                  onClick={() => onRename(frame.address, v.index)}
+                  onDoubleClick={(e) => {
+                    e.preventDefault()
+                    onJumpDef(v.defIx)
+                  }}
+                >
+                  <span className="frame-var-id">${v.index}</span>
+                  {name ? (
+                    <span className="frame-var-name">{name}</span>
+                  ) : null}
+                  <span className="frame-var-ty">{v.ty}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RefsModal({
   bindingIndex,
   refs,
+  labelFor,
   onClose,
   onPick,
 }: {
   bindingIndex: number
   refs: BindingLoc[]
+  labelFor: (index: number) => string
   onClose: () => void
   onPick: (loc: BindingLoc) => void
 }) {
   const { t } = useApp()
-  const label = `$${bindingIndex}`
+  const label = labelFor(bindingIndex)
   return (
     <div
       className="refs-modal-backdrop"
@@ -615,7 +753,10 @@ function RefsModal({
                 onClick={() => onPick(ref)}
               >
                 <code className="refs-modal-line">
-                  <BindingColoredText text={ref.line.trim()} />
+                  <BindingColoredText
+                    text={ref.line.trim()}
+                    labelFor={labelFor}
+                  />
                 </code>
                 <span className="refs-modal-ix">
                   {t.refsIxLabel} {ref.ixIndex}
@@ -633,12 +774,14 @@ function InstructionBody({
   ix,
   flashLine,
   refIndex,
+  labelFor,
   onValueClick,
   onFindRefs,
 }: {
   ix: ExploredInstruction
   flashLine: number | null
   refIndex: Map<string, BindingLoc[]>
+  labelFor: (index: number) => string
   onValueClick: (bindingIndex: number) => void
   onFindRefs: (
     bindingIndex: number,
@@ -794,6 +937,7 @@ function InstructionBody({
                   <div className="l1-line-row">
                     <L1LineWithLinks
                       line={line}
+                      labelFor={labelFor}
                       onAcctClick={focusRemainingAccount}
                       onRangeClick={focusRemainingRange}
                       onValueClick={onValueClick}
@@ -878,11 +1022,13 @@ function InstructionBody({
  */
 function L1LineWithLinks({
   line,
+  labelFor,
   onAcctClick,
   onRangeClick,
   onValueClick,
 }: {
   line: string
+  labelFor: (index: number) => string
   onAcctClick: (index: number) => void
   onRangeClick: (start: number, len: number) => void
   onValueClick: (bindingIndex: number) => void
@@ -915,6 +1061,7 @@ function L1LineWithLinks({
       )
     } else if (m[3] !== undefined) {
       const idx = Number(m[3])
+      const label = labelFor(idx)
       nodes.push(
         <button
           key={key++}
@@ -927,7 +1074,7 @@ function L1LineWithLinks({
             onValueClick(idx)
           }}
         >
-          ${idx}
+          {label}
         </button>,
       )
     } else {
@@ -954,8 +1101,14 @@ function L1LineWithLinks({
   return <code className="l1-line-code">{nodes}</code>
 }
 
-/** Color `$N` in plain summary / non-interactive text. */
-function BindingColoredText({ text }: { text: string }) {
+/** Color `$N` in plain summary / non-interactive text; honor aliases. */
+function BindingColoredText({
+  text,
+  labelFor,
+}: {
+  text: string
+  labelFor?: (index: number) => string
+}) {
   const nodes: ReactNode[] = []
   const re = /\$(\d+)/g
   let last = 0
@@ -971,8 +1124,9 @@ function BindingColoredText({ text }: { text: string }) {
         key={key++}
         className="value-swatch"
         style={{ color: bindingColor(idx) }}
+        title={`$${idx}`}
       >
-        ${idx}
+        {labelFor?.(idx) ?? `$${idx}`}
       </span>,
     )
     last = m.index + m[0].length

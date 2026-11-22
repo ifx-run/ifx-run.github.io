@@ -650,6 +650,73 @@ textarea {
   gap: 0.4rem;
   flex-wrap: wrap;
 }
+.frame-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0 0 0.75rem;
+}
+.frame-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.frame-strip-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.frame-strip-label code {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+.frame-strip-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.frame-var {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.28rem 0.5rem;
+  border-radius: 0.3rem;
+  border: 1px solid;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  text-align: left;
+}
+.frame-var:hover {
+  filter: brightness(1.12);
+}
+.frame-var-id {
+  opacity: 0.85;
+  flex: 0 0 auto;
+}
+.frame-var-name {
+  color: var(--text);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 10rem;
+}
+.frame-var-ty {
+  opacity: 0.72;
+  font-weight: 500;
+  flex: 0 0 auto;
+}
 .ghost.tiny {
   padding: 0.28rem 0.65rem;
   font-size: 0.75rem;
