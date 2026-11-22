@@ -29,6 +29,7 @@ import {
   getStoredWire,
   setStoredWire,
 } from '../lib/solana/wire-storage'
+import { bindingColor } from '../lib/ifx/binding-color'
 
 const DATA_ENCODINGS: DataEncoding[] = ['hex', 'base58', 'base64']
 const AUTO_DECODE_MS = 280
@@ -497,7 +498,9 @@ function InstructionList({
                 <span className="ix-name" title={ix.programId}>
                   {ix.programLabel ?? shortenAddress(ix.programId, 5, 4)}
                 </span>
-                <span className="ix-sum">{ix.summary}</span>
+                <span className="ix-sum">
+                  <BindingColoredText text={ix.summary} />
+                </span>
               </button>
               {open && (
                 <InstructionBody
@@ -769,6 +772,7 @@ function L1LineWithLinks({
           type="button"
           className="value-ref"
           title={`$${idx}`}
+          style={{ color: bindingColor(idx) }}
           onClick={(e) => {
             e.stopPropagation()
             onValueClick(idx)
@@ -799,6 +803,36 @@ function L1LineWithLinks({
     nodes.push(<span key={key++}>{line.slice(last)}</span>)
   }
   return <code className="l1-line-code">{nodes}</code>
+}
+
+/** Color `$N` in plain summary / non-interactive text. */
+function BindingColoredText({ text }: { text: string }) {
+  const nodes: ReactNode[] = []
+  const re = /\$(\d+)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  let key = 0
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      nodes.push(<span key={key++}>{text.slice(last, m.index)}</span>)
+    }
+    const idx = Number(m[1])
+    nodes.push(
+      <span
+        key={key++}
+        className="value-swatch"
+        style={{ color: bindingColor(idx) }}
+      >
+        ${idx}
+      </span>,
+    )
+    last = m.index + m[0].length
+  }
+  if (nodes.length === 0) return <>{text}</>
+  if (last < text.length) {
+    nodes.push(<span key={key++}>{text.slice(last)}</span>)
+  }
+  return <>{nodes}</>
 }
 
 function roleAria(

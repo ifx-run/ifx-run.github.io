@@ -966,15 +966,19 @@ textarea {
   margin: 0;
   border: none;
   background: transparent;
-  color: var(--ifx);
+  /* color set inline via bindingColor($N) */
   font: inherit;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
   cursor: pointer;
 }
 .value-ref:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.18);
+}
+.value-swatch {
+  font-weight: 700;
 }
 .acct-ref {
   display: inline;
