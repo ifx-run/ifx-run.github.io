@@ -1489,8 +1489,8 @@ a.tx-signature-solscan:hover {
   border: 0;
 }
 .l1-raw {
-  margin-top: 0.5rem;
-  font-size: 0.82rem;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 .l1-raw summary {
