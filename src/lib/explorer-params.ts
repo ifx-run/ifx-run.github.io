@@ -1,4 +1,4 @@
-/** Legacy query keys (still accepted, then redirected to `/explorer/:sig`). */
+/** Legacy query keys (still accepted, then redirected to `/explorer/:ingress`). */
 const SIGNATURE_KEYS = ['hash', 'sig', 'signature'] as const
 const WIRE_KEYS = ['tx', 'wire'] as const
 
@@ -24,12 +24,15 @@ export function hasExplorerSearchIngress(params: URLSearchParams): boolean {
   return explorerIngressFromSearchParams(params) != null
 }
 
-/** Signature segment from `/explorer/:sig`, or null on `/explorer`. */
-export function explorerSignatureFromParam(
-  sig: string | undefined | null,
+/**
+ * Path segment from `/explorer/:ingress`, or null on `/explorer`.
+ * The segment may be a tx signature/hash or wire bytes (hex / base58 / base64).
+ */
+export function explorerIngressFromParam(
+  ingress: string | undefined | null,
 ): string | null {
-  if (sig == null) return null
-  let raw = sig.trim()
+  if (ingress == null) return null
+  let raw = ingress.trim()
   if (!raw) return null
   try {
     raw = decodeURIComponent(raw).trim()
@@ -39,11 +42,14 @@ export function explorerSignatureFromParam(
   return raw || null
 }
 
+/** @deprecated Use explorerIngressFromParam */
+export const explorerSignatureFromParam = explorerIngressFromParam
+
 /**
- * Pathname signature when the URL is `/explorer/<sig>` (basename-aware).
+ * Pathname ingress when the URL is `/explorer/<ingress>` (basename-aware).
  * Used for first paint before the router hook is ready.
  */
-export function explorerSignatureFromPathname(
+export function explorerIngressFromPathname(
   pathname: string,
   basename: string = typeof import.meta !== 'undefined'
     ? String(import.meta.env.BASE_URL ?? '').replace(/\/$/, '')
@@ -53,16 +59,23 @@ export function explorerSignatureFromPathname(
   if (basename && path.startsWith(basename)) {
     path = path.slice(basename.length) || '/'
   }
+  // One segment only — callers must encodeURIComponent wire (so `/` in base64 → %2F).
   const m = /^\/explorer\/([^/]+)\/?$/.exec(path)
   if (!m) return null
-  return explorerSignatureFromParam(m[1])
+  return explorerIngressFromParam(m[1])
 }
 
-/** Canonical explorer location: `/explorer` or `/explorer/<signature>`. */
-export function explorerPath(signature: string | null | undefined): string {
-  const sig = signature?.trim()
-  if (!sig) return '/explorer'
-  return `/explorer/${encodeURIComponent(sig)}`
+/** @deprecated Use explorerIngressFromPathname */
+export const explorerSignatureFromPathname = explorerIngressFromPathname
+
+/**
+ * Canonical explorer location: `/explorer` or `/explorer/<ingress>`.
+ * Prefer a signature/hash when available; wire is allowed but should be URL-encoded.
+ */
+export function explorerPath(ingress: string | null | undefined): string {
+  const value = ingress?.trim()
+  if (!value) return '/explorer'
+  return `/explorer/${encodeURIComponent(value)}`
 }
 
 /** Initial textarea value from path, then legacy query (not localStorage). */
@@ -71,7 +84,7 @@ export function explorerIngressFromLocation(
   search: string = typeof window !== 'undefined' ? window.location.search : '',
 ): string | null {
   return (
-    explorerSignatureFromPathname(pathname) ??
+    explorerIngressFromPathname(pathname) ??
     explorerIngressFromSearchParams(new URLSearchParams(search))
   )
 }

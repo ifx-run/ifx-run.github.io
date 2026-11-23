@@ -14,9 +14,9 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import {
   explorerIngressFromLocation,
+  explorerIngressFromParam,
   explorerIngressFromSearchParams,
   explorerPath,
-  explorerSignatureFromParam,
   hasExplorerSearchIngress,
 } from '../lib/explorer-params'
 import {
@@ -86,7 +86,7 @@ const AUTO_DECODE_MS = 280
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
-  const { sig: sigParam } = useParams()
+  const { ingress: ingressParam } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const inputId = useId()
@@ -115,17 +115,20 @@ export function ExplorerWorkspace() {
   const [aliasEpoch, setAliasEpoch] = useState(0)
   const [globalAliasOpen, setGlobalAliasOpen] = useState(false)
 
-  /** Keep `/explorer/:sig` in lockstep with the decoded / requested transaction. */
+  /**
+   * Keep `/explorer/:ingress` aligned with the active tx.
+   * Prefer signature/hash when known (short); otherwise the path may hold wire.
+   */
   const syncExplorerUrl = useCallback(
-    (signature: string | null) => {
-      const sig = signature?.trim() || null
-      bootstrappedUrlRef.current = sig ?? ''
-      const current = explorerSignatureFromParam(sigParam)
+    (ingress: string | null) => {
+      const value = ingress?.trim() || null
+      bootstrappedUrlRef.current = value ?? ''
+      const current = explorerIngressFromParam(ingressParam)
       const needsQueryStrip = hasExplorerSearchIngress(searchParams)
-      if (sig === current && !needsQueryStrip) return
-      navigate(explorerPath(sig), { replace: true })
+      if (value === current && !needsQueryStrip) return
+      navigate(explorerPath(value), { replace: true })
     },
-    [navigate, searchParams, sigParam],
+    [ingressParam, navigate, searchParams],
   )
 
   const applyResult = useCallback(
@@ -138,8 +141,8 @@ export function ExplorerWorkspace() {
         rememberDecodedWire(wire)
         if (explored.signature) rememberSignatureWire(explored.signature, wire)
       }
-      // Prefer the wire signature so the address bar matches the shown tx.
-      syncExplorerUrl(explored.signature)
+      // Prefer signature/hash in the path; fall back to wire when unsigned.
+      syncExplorerUrl(explored.signature ?? (wire ? wire : null))
     },
     [syncExplorerUrl],
   )
@@ -320,11 +323,11 @@ export function ExplorerWorkspace() {
     [clearResult, run, syncExplorerUrl],
   )
 
-  const routeSig = explorerSignatureFromParam(sigParam)
+  const routeIngress = explorerIngressFromParam(ingressParam)
   const searchKey = searchParams.toString()
 
   useEffect(() => {
-    // Legacy `?hash=` / `?tx=` → load once; syncExplorerUrl canonicalizes to `/explorer/:sig`.
+    // Legacy `?hash=` / `?tx=` → load once; syncExplorerUrl rewrites to `/explorer/:ingress`.
     const fromQuery = explorerIngressFromSearchParams(searchParams)
     if (fromQuery) {
       if (bootstrappedUrlRef.current !== fromQuery) {
@@ -332,20 +335,19 @@ export function ExplorerWorkspace() {
         setInput(fromQuery)
         setStoredWire(fromQuery)
         run(fromQuery)
-      } else if (looksLikeSignature(fromQuery)) {
-        navigate(explorerPath(fromQuery), { replace: true })
       } else {
-        navigate(explorerPath(null), { replace: true })
+        navigate(explorerPath(fromQuery), { replace: true })
       }
       return
     }
 
-    if (routeSig) {
-      if (bootstrappedUrlRef.current === routeSig) return
-      bootstrappedUrlRef.current = routeSig
-      setInput(routeSig)
-      setStoredWire(routeSig)
-      run(routeSig)
+    if (routeIngress) {
+      if (bootstrappedUrlRef.current === routeIngress) return
+      bootstrappedUrlRef.current = routeIngress
+      setInput(routeIngress)
+      setStoredWire(routeIngress)
+      // Signature → fetch/decode; otherwise treat as wire and decode offline.
+      run(routeIngress)
       return
     }
 
@@ -354,9 +356,9 @@ export function ExplorerWorkspace() {
     bootstrappedUrlRef.current = ''
     const stored = getStoredWire()
     if (stored) run(stored)
-    // Bootstrap from /explorer/:sig (or legacy query / localStorage).
+    // Bootstrap from /explorer/:ingress (hash or wire) / legacy query / localStorage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeSig, searchKey])
+  }, [routeIngress, searchKey])
 
   useEffect(() => {
     return () => {
