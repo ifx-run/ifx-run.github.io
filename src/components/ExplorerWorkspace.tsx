@@ -83,7 +83,7 @@ const AUTO_DECODE_MS = 280
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const inputId = useId()
   const rpcId = useId()
   const sigRpcId = useId()
@@ -364,6 +364,32 @@ export function ExplorerWorkspace() {
     clearResult()
     setResolving(false)
     setFetchingSig(false)
+    // Drop deep-link params so refresh does not re-hydrate the same tx.
+    if (
+      searchParams.has('hash') ||
+      searchParams.has('sig') ||
+      searchParams.has('signature') ||
+      searchParams.has('tx') ||
+      searchParams.has('wire')
+    ) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          for (const key of [
+            'hash',
+            'sig',
+            'signature',
+            'tx',
+            'wire',
+          ] as const) {
+            next.delete(key)
+          }
+          return next
+        },
+        { replace: true },
+      )
+      bootstrappedUrlRef.current = ''
+    }
   }
 
   function onInputChange(value: string) {
@@ -506,6 +532,7 @@ export function ExplorerWorkspace() {
             <button
               type="button"
               className="ghost tiny"
+              title={t.clearTitle}
               disabled={!hasInput && !result && !error}
               onClick={onClear}
             >

@@ -35,6 +35,8 @@ export const copy = {
       'Paste wire (hex / base58 / base64) or a transaction signature. Signature fetch needs RPC.',
     load: 'Decode',
     clear: 'Clear',
+    clearTitle:
+      'Clear the input and forget this transaction (refresh stays empty)',
     sigRpcTitle: 'RPC needed to fetch transaction',
     sigRpcWhy:
       'That looks like a transaction signature. Provide an RPC URL to download the wire bytes, then we decode offline. Official public RPCs are often rate-limited or block browsers — use a free provider URL if needed.',
@@ -166,6 +168,7 @@ export const copy = {
       '粘贴交易序列化数据（hex / base58 / base64）或交易签名。签名拉取需要 RPC。',
     load: '解码',
     clear: '清空',
+    clearTitle: '清空输入，并忘记当前交易（刷新后不会再自动恢复）',
     sigRpcTitle: '需要 RPC 以拉取交易',
     sigRpcWhy:
       '输入看起来像交易签名。填写 RPC 后我们会下载序列化数据，再离线解码。官方公共节点常限流或禁止浏览器访问 — 可改用免费服务商的 RPC。',

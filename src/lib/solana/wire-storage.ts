@@ -136,7 +136,10 @@ function writeDraft(wire: string): void {
   }
 }
 
-/** Textarea draft, falling back to the active cache entry. */
+/**
+ * Textarea draft, or the explicitly active cache entry.
+ * Does not fall back to an arbitrary LRU item — after Clear, refresh stays empty.
+ */
 export function getStoredWire(): string {
   const draft = readDraft()
   if (draft) return draft
@@ -145,7 +148,7 @@ export function getStoredWire(): string {
     const hit = bag.entries.find((e) => e.id === bag.activeId)
     if (hit) return hit.wire
   }
-  return sortByTouched(bag.entries)[0]?.wire ?? ''
+  return ''
 }
 
 /** Persist the textarea draft (does not grow the LRU list). */
@@ -196,11 +199,34 @@ export function removeStoredWire(wire: string): void {
   }
 }
 
-/** Clear the current draft and drop it from the cache. */
+/**
+ * Clear the explorer session: drop the draft, forget the current wire’s cache
+ * entry + aliases, and leave no active transaction (do not promote another LRU item).
+ */
 export function clearStoredWire(): void {
-  const current = getStoredWire()
-  if (current) removeStoredWire(current)
-  else writeDraft('')
+  const draft = readDraft()
+  const bag = readBag()
+  const active = bag.activeId
+    ? bag.entries.find((e) => e.id === bag.activeId)?.wire
+    : undefined
+  const current = (draft || active || '').trim()
+
+  if (current) {
+    const id = wireAliasBagKey(current)
+    const hit = bag.entries.find((e) => e.id === id)
+    if (hit) clearStoredAliases(hit.wire)
+    else clearStoredAliases(current)
+    writeBag(
+      enforceLimit({
+        activeId: null,
+        entries: bag.entries.filter((e) => e.id !== id),
+      }),
+    )
+  } else if (bag.activeId != null) {
+    writeBag(enforceLimit({ ...bag, activeId: null }))
+  }
+
+  writeDraft('')
   try {
     localStorage.removeItem(LEGACY_KEY)
   } catch {
