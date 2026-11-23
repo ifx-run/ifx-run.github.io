@@ -1,4 +1,5 @@
 import { decodeWireInput } from './bytes'
+import { getGlobalAddressAliasMap } from './global-alias-storage'
 
 const STORAGE_KEY = 'ifx.run.bindingAliases'
 
@@ -88,6 +89,14 @@ export function getStoredAliases(wire: string): Record<string, string> {
   const key = wireAliasBagKey(wire)
   if (key === 'raw:') return {}
   return { ...(readBag()[key] ?? {}) }
+}
+
+/**
+ * Display map for a wire: global address names under local overrides.
+ * Binding keys (`frame:index`) only exist locally.
+ */
+export function getMergedAliases(wire: string): Record<string, string> {
+  return { ...getGlobalAddressAliasMap(), ...getStoredAliases(wire) }
 }
 
 export function setStoredAlias(

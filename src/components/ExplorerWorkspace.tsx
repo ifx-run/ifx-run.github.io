@@ -33,10 +33,17 @@ import {
 } from '../lib/solana/wire-storage'
 import {
   clearStoredAliases,
+  getMergedAliases,
   getStoredAliases,
   mergeStoredAliases,
   setStoredAlias,
 } from '../lib/solana/alias-storage'
+import {
+  clearGlobalAddressAlias,
+  getGlobalAddressAlias,
+  hasGlobalAddressAlias,
+  setGlobalAddressAlias,
+} from '../lib/solana/global-alias-storage'
 import {
   annotationDownloadName,
   annotationPackageToJson,
@@ -910,12 +917,17 @@ function InstructionList({
   const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
   const [renameModal, setRenameModal] = useState<
     | { kind: 'binding'; frame: string; index: number; defIx: number }
-    | { kind: 'address'; address: string }
+    | {
+        kind: 'address'
+        address: string
+        /** Prefer checking “global address book” (e.g. program ids). */
+        preferGlobal?: boolean
+      }
     | null
   >(null)
   const [clearAllNamesOpen, setClearAllNamesOpen] = useState(false)
   const [aliases, setAliases] = useState<Record<string, string>>(() =>
-    getStoredAliases(wireKey),
+    getMergedAliases(wireKey),
   )
   const flashLineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -929,7 +941,7 @@ function InstructionList({
   }, [resultKey])
 
   useEffect(() => {
-    setAliases(getStoredAliases(wireKey))
+    setAliases(getMergedAliases(wireKey))
   }, [wireKey, resultKey, aliasEpoch])
 
   useLayoutEffect(() => {
@@ -1008,7 +1020,7 @@ function InstructionList({
   )
 
   const refreshAliases = useCallback(() => {
-    setAliases(getStoredAliases(wireKey))
+    setAliases(getMergedAliases(wireKey))
   }, [wireKey])
 
   const openRenameBinding = useCallback(
@@ -1018,13 +1030,30 @@ function InstructionList({
     [],
   )
 
-  const openRenameAddress = useCallback((address: string) => {
-    setRenameModal({ kind: 'address', address })
-  }, [])
+  const openRenameAddress = useCallback(
+    (address: string, opts?: { preferGlobal?: boolean }) => {
+      setRenameModal({
+        kind: 'address',
+        address,
+        preferGlobal: opts?.preferGlobal,
+      })
+    },
+    [],
+  )
 
   const saveRename = useCallback(
     (key: string, name: string) => {
       setStoredAlias(wireKey, key, name)
+      refreshAliases()
+      setRenameModal(null)
+    },
+    [refreshAliases, wireKey],
+  )
+
+  const saveAddressRename = useCallback(
+    (address: string, name: string, global: boolean) => {
+      setStoredAlias(wireKey, address, name)
+      if (global) setGlobalAddressAlias(address, name)
       refreshAliases()
       setRenameModal(null)
     },
@@ -1038,6 +1067,24 @@ function InstructionList({
       setRenameModal(null)
     },
     [refreshAliases, wireKey],
+  )
+
+  const clearAddressAlias = useCallback(
+    (address: string, global: boolean) => {
+      setStoredAlias(wireKey, address, '')
+      if (global) clearGlobalAddressAlias(address)
+      refreshAliases()
+      setRenameModal(null)
+    },
+    [refreshAliases, wireKey],
+  )
+
+  /** Quick clear from AddressDisplay: drop local and global. */
+  const clearAddressAliasBoth = useCallback(
+    (address: string) => {
+      clearAddressAlias(address, true)
+    },
+    [clearAddressAlias],
   )
 
   const clearBindingName = useCallback(
@@ -1100,8 +1147,8 @@ function InstructionList({
             }
             onRename={openRenameBinding}
             onClearName={clearBindingName}
-            onRenameAddress={openRenameAddress}
-            onClearAddress={(address) => clearAliasKey(address)}
+            onRenameAddress={(address) => openRenameAddress(address)}
+            onClearAddress={clearAddressAliasBoth}
             onJumpDef={(defIx) => {
               setExpanded((prev) => {
                 const next = new Set(prev)
@@ -1179,7 +1226,7 @@ function InstructionList({
                   }}
                   onFindRefs={onFindRefs}
                   onRenameAddress={openRenameAddress}
-                  onClearAddress={(address) => clearAliasKey(address)}
+                  onClearAddress={clearAddressAliasBoth}
                 />
               )}
             </li>
@@ -1246,12 +1293,31 @@ function InstructionList({
         <AliasEditModal
           title={t.addressRenameTitle}
           prompt={t.addressRenamePrompt}
-          initialName={aliases[renameModal.address] ?? ''}
+          initialName={
+            getStoredAliases(wireKey)[renameModal.address] ??
+            getGlobalAddressAlias(renameModal.address) ??
+            ''
+          }
           placeholder={shortenAddress(renameModal.address, 8, 8)}
           meta={shortenAddress(renameModal.address, 8, 8)}
           metaTitle={renameModal.address}
-          onSave={(name) => saveRename(renameModal.address, name)}
-          onClear={() => clearAliasKey(renameModal.address)}
+          globalToggle={{
+            defaultChecked:
+              Boolean(renameModal.preferGlobal) ||
+              hasGlobalAddressAlias(renameModal.address),
+            label: t.addressAliasGlobal,
+            clearHint: t.addressAliasGlobalClearHint,
+          }}
+          onSave={(name, opts) =>
+            saveAddressRename(
+              renameModal.address,
+              name,
+              Boolean(opts?.global),
+            )
+          }
+          onClear={(opts) =>
+            clearAddressAlias(renameModal.address, Boolean(opts?.global))
+          }
           onClose={() => setRenameModal(null)}
         />
       )}
@@ -1348,6 +1414,7 @@ function AliasEditModal({
   placeholder,
   meta,
   metaTitle,
+  globalToggle,
   onSave,
   onClear,
   onGoToDef,
@@ -1359,15 +1426,24 @@ function AliasEditModal({
   placeholder: string
   meta?: string
   metaTitle?: string
-  onSave: (name: string) => void
-  onClear: () => void
+  globalToggle?: {
+    defaultChecked: boolean
+    label: string
+    clearHint: string
+  }
+  onSave: (name: string, opts?: { global?: boolean }) => void
+  onClear: (opts?: { global?: boolean }) => void
   onGoToDef?: () => void
   onClose: () => void
 }) {
   const { t } = useApp()
   const [draft, setDraft] = useState(initialName)
+  const [globalOn, setGlobalOn] = useState(
+    () => globalToggle?.defaultChecked ?? false,
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
+  const globalId = useId()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -1384,8 +1460,10 @@ function AliasEditModal({
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    onSave(draft)
+    onSave(draft, globalToggle ? { global: globalOn } : undefined)
   }
+
+  const hasName = Boolean(initialName.trim() || draft.trim())
 
   return (
     <div
@@ -1424,6 +1502,17 @@ function AliasEditModal({
               <code title={metaTitle}>{meta}</code>
             </p>
           ) : null}
+          {globalToggle ? (
+            <label className="rename-modal-global" htmlFor={globalId}>
+              <input
+                id={globalId}
+                type="checkbox"
+                checked={globalOn}
+                onChange={(e) => setGlobalOn(e.target.checked)}
+              />
+              <span>{globalToggle.label}</span>
+            </label>
+          ) : null}
           <div className="rename-modal-actions">
             {onGoToDef ? (
               <button type="button" className="ghost" onClick={onGoToDef}>
@@ -1433,8 +1522,15 @@ function AliasEditModal({
             <button
               type="button"
               className="ghost"
-              disabled={!initialName}
-              onClick={onClear}
+              disabled={!hasName && !initialName}
+              title={
+                globalToggle && globalOn
+                  ? globalToggle.clearHint
+                  : undefined
+              }
+              onClick={() =>
+                onClear(globalToggle ? { global: globalOn } : undefined)
+              }
             >
               {t.frameClearName}
             </button>
@@ -1708,7 +1804,10 @@ function InstructionBody({
     defIx: number,
     defLine: number,
   ) => void
-  onRenameAddress: (address: string) => void
+  onRenameAddress: (
+    address: string,
+    opts?: { preferGlobal?: boolean },
+  ) => void
   onClearAddress: (address: string) => void
 }) {
   const { t } = useApp()
@@ -1767,7 +1866,9 @@ function InstructionBody({
               address={ix.programId}
               aliases={aliases}
               cluster={ix.ifxCluster}
-              onRename={onRenameAddress}
+              onRename={(address) =>
+                onRenameAddress(address, { preferGlobal: true })
+              }
               onClear={onClearAddress}
             />
           </dd>

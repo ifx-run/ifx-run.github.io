@@ -125,6 +125,10 @@ export const copy = {
     frameClearAllNamesConfirm: 'Clear all',
     addressRenameTitle: 'Rename address',
     addressRenamePrompt: 'Name for this address (empty = show address)',
+    addressAliasGlobal:
+      'Also apply to the global address book (other transactions)',
+    addressAliasGlobalClearHint:
+      'Clear will also remove the global entry',
     addressCopy: 'Copy',
     addressCopied: 'Copied',
     addressOpenSolscan: 'Open in Solscan',
@@ -240,6 +244,8 @@ export const copy = {
     frameClearAllNamesConfirm: '全部清除',
     addressRenameTitle: '重命名地址',
     addressRenamePrompt: '为该地址命名（留空则显示原地址）',
+    addressAliasGlobal: '同时应用到全局地址簿（其他交易也可用）',
+    addressAliasGlobalClearHint: '清除时也会删掉全局条目',
     addressCopy: '复制',
     addressCopied: '已复制',
     addressOpenSolscan: '在 Solscan 打开',
