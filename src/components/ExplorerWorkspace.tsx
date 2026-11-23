@@ -10,13 +10,14 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import {
-  explorerIngressFromLocationSearch,
+  explorerIngressFromLocation,
   explorerIngressFromSearchParams,
-  searchParamsEqual,
-  withExplorerHash,
+  explorerPath,
+  explorerSignatureFromParam,
+  hasExplorerSearchIngress,
 } from '../lib/explorer-params'
 import {
   exploreFromWire,
@@ -85,7 +86,9 @@ const AUTO_DECODE_MS = 280
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const { sig: sigParam } = useParams()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const inputId = useId()
   const rpcId = useId()
   const sigRpcId = useId()
@@ -93,11 +96,11 @@ export function ExplorerWorkspace() {
   const decodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ingressRef = useRef<HTMLFormElement | null>(null)
   const importFileRef = useRef<HTMLInputElement | null>(null)
-  /** Avoid re-applying the same deep-link when searchParams identity churns. */
+  /** Avoid re-applying the same deep-link when the route param churns. */
   const bootstrappedUrlRef = useRef<string | null>(null)
 
   const [input, setInput] = useState(
-    () => explorerIngressFromLocationSearch() ?? getStoredWire(),
+    () => explorerIngressFromLocation() ?? getStoredWire(),
   )
   const [rpcDraft, setRpcDraft] = useState(() => getStoredRpcUrl())
   const [result, setResult] = useState<ExploredTransaction | null>(null)
@@ -112,20 +115,17 @@ export function ExplorerWorkspace() {
   const [aliasEpoch, setAliasEpoch] = useState(0)
   const [globalAliasOpen, setGlobalAliasOpen] = useState(false)
 
-  /** Keep ?hash= in lockstep with the decoded / requested transaction. */
+  /** Keep `/explorer/:sig` in lockstep with the decoded / requested transaction. */
   const syncExplorerUrl = useCallback(
     (signature: string | null) => {
       const sig = signature?.trim() || null
       bootstrappedUrlRef.current = sig ?? ''
-      setSearchParams(
-        (prev) => {
-          const next = withExplorerHash(prev, sig)
-          return searchParamsEqual(next, prev) ? prev : next
-        },
-        { replace: true },
-      )
+      const current = explorerSignatureFromParam(sigParam)
+      const needsQueryStrip = hasExplorerSearchIngress(searchParams)
+      if (sig === current && !needsQueryStrip) return
+      navigate(explorerPath(sig), { replace: true })
     },
-    [setSearchParams],
+    [navigate, searchParams, sigParam],
   )
 
   const applyResult = useCallback(
@@ -320,26 +320,43 @@ export function ExplorerWorkspace() {
     [clearResult, run, syncExplorerUrl],
   )
 
+  const routeSig = explorerSignatureFromParam(sigParam)
   const searchKey = searchParams.toString()
 
   useEffect(() => {
-    const fromUrl = explorerIngressFromSearchParams(searchParams)
-    if (fromUrl) {
-      if (bootstrappedUrlRef.current === fromUrl) return
-      bootstrappedUrlRef.current = fromUrl
-      setInput(fromUrl)
-      setStoredWire(fromUrl)
-      run(fromUrl)
+    // Legacy `?hash=` / `?tx=` → load once; syncExplorerUrl canonicalizes to `/explorer/:sig`.
+    const fromQuery = explorerIngressFromSearchParams(searchParams)
+    if (fromQuery) {
+      if (bootstrappedUrlRef.current !== fromQuery) {
+        bootstrappedUrlRef.current = fromQuery
+        setInput(fromQuery)
+        setStoredWire(fromQuery)
+        run(fromQuery)
+      } else if (looksLikeSignature(fromQuery)) {
+        navigate(explorerPath(fromQuery), { replace: true })
+      } else {
+        navigate(explorerPath(null), { replace: true })
+      }
       return
     }
+
+    if (routeSig) {
+      if (bootstrappedUrlRef.current === routeSig) return
+      bootstrappedUrlRef.current = routeSig
+      setInput(routeSig)
+      setStoredWire(routeSig)
+      run(routeSig)
+      return
+    }
+
     // No deep-link: restore localStorage only on the first bootstrap.
     if (bootstrappedUrlRef.current !== null) return
     bootstrappedUrlRef.current = ''
     const stored = getStoredWire()
     if (stored) run(stored)
-    // Bootstrap from ?hash=/?sig=/?tx= (or localStorage); later edits use onInputChange.
+    // Bootstrap from /explorer/:sig (or legacy query / localStorage).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchKey])
+  }, [routeSig, searchKey])
 
   useEffect(() => {
     return () => {

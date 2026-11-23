@@ -15,6 +15,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="explorer" element={<ExplorerWorkspace />} />
+            <Route path="explorer/:sig" element={<ExplorerWorkspace />} />
             <Route path="docs" element={<DocsIndexPage />} />
             <Route path="docs/:slug" element={<DocsArticlePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
