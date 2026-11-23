@@ -1103,7 +1103,7 @@ a.tx-signature-solscan:hover {
   white-space: nowrap;
 }
 .ix-body {
-  padding: 0.15rem 0.75rem 0.85rem 2.15rem;
+  padding: 0.75rem 0.75rem 0.85rem 2.15rem;
   border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
 .ix-body h3:first-of-type {
