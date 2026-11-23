@@ -1,0 +1,41 @@
+{
+  "origin": "https://ifx.run",
+  "siteName": "Ifx",
+  "defaultTitle": "Ifx — Solana on-chain orchestration explorer",
+  "defaultDescription": "Decode Ifx and SIMD-0385 v1 Solana transactions offline. Official explorer and docs for on-chain orchestration — Frame, let bindings, CPI patches.",
+  "ogImagePath": "/og.svg",
+  "twitter": "@",
+  "pages": {
+    "home": {
+      "title": "Ifx — Solana on-chain orchestration",
+      "description": "On-chain Solana orchestration without a new wrapper program each time. Explore Ifx transactions offline and read the design docs."
+    },
+    "explorer": {
+      "title": "Explorer — Ifx transaction wire decoder",
+      "description": "Paste Solana transaction wire (hex, base58, base64) or a signature. Offline decode for Ifx instructions and SIMD-0385 v1 packets."
+    },
+    "docs": {
+      "title": "Docs — Ifx design & implementation",
+      "description": "Design, glossary, Frame authority, CPI patches, typed let bindings, and debugging notes for the Ifx Solana program."
+    }
+  },
+  "docTitles": {
+    "readme": { "en": "README", "zh": "README" },
+    "design": { "en": "Design", "zh": "设计" },
+    "glossary": { "en": "Glossary", "zh": "术语表" },
+    "implementation": { "en": "Implementation", "zh": "实现" },
+    "frame-authority": { "en": "Frame authority", "zh": "Frame 权限" },
+    "bundles": { "en": "Bundles", "zh": "Bundles" },
+    "structured-cpi-patches": {
+      "en": "Structured CPI patches",
+      "zh": "结构化 CPI patch"
+    },
+    "raw-cpi-patches": { "en": "Raw CPI patches", "zh": "Raw CPI patch" },
+    "errors": { "en": "Errors", "zh": "错误码" },
+    "debugging": { "en": "Debugging", "zh": "调试" },
+    "typed-let-bindings": {
+      "en": "Typed let bindings",
+      "zh": "Typed let 绑定"
+    }
+  }
+}

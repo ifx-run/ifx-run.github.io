@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { DocumentHead } from './components/DocumentHead'
 import { Layout } from './components/Layout'
 import { ExplorerWorkspace } from './components/ExplorerWorkspace'
 import { DocsArticlePage, DocsIndexPage } from './pages/DocsPage'
@@ -11,6 +12,7 @@ export default function App() {
   return (
     <AppProvider>
       <BrowserRouter basename={basename}>
+        <DocumentHead />
         <Routes>
           <Route element={<Layout />}>
             <Route index element={<HomePage />} />

@@ -46,30 +46,39 @@ function destFileName(entry) {
   return base
 }
 
-await rm(outDir, { recursive: true, force: true })
-await mkdir(outDir, { recursive: true })
-
 const resolvedSha = await resolveSha(pin.repo, ref)
 console.log(`syncing docs from ${pin.repo}@${resolvedSha} (${allowlist.length} files)`)
 
+// Stage into a temp dir, then swap — never wipe content/docs on a failed sync.
+const stageDir = await mkdtemp(join(tmpdir(), 'ifx-docs-out-'))
 let fetched
 try {
-  fetched = await syncViaGit(pin.repo, resolvedSha, allowlist, outDir)
-} catch (e) {
-  console.warn(`git sync failed (${e instanceof Error ? e.message : e}); falling back to HTTP`)
-  fetched = await syncViaHttp(pin.repo, resolvedSha, allowlist, outDir)
-}
+  try {
+    fetched = await syncViaGit(pin.repo, resolvedSha, allowlist, stageDir)
+  } catch (e) {
+    console.warn(
+      `git sync failed (${e instanceof Error ? e.message : e}); falling back to HTTP`,
+    )
+    fetched = await syncViaHttp(pin.repo, resolvedSha, allowlist, stageDir)
+  }
 
-const meta = {
-  repo: pin.repo,
-  ref,
-  sha: resolvedSha,
-  syncedAt: new Date().toISOString(),
-  files: fetched,
-  githubTreeUrl: `https://github.com/${pin.repo}/tree/${resolvedSha}/docs`,
+  await rm(outDir, { recursive: true, force: true })
+  await mkdir(dirname(outDir), { recursive: true })
+  await cp(stageDir, outDir, { recursive: true })
+
+  const meta = {
+    repo: pin.repo,
+    ref,
+    sha: resolvedSha,
+    syncedAt: new Date().toISOString(),
+    files: fetched,
+    githubTreeUrl: `https://github.com/${pin.repo}/tree/${resolvedSha}/docs`,
+  }
+  await writeFile(metaPath, JSON.stringify(meta, null, 2) + '\n', 'utf8')
+  console.log(`wrote ${metaPath}`)
+} finally {
+  await rm(stageDir, { recursive: true, force: true }).catch(() => {})
 }
-await writeFile(metaPath, JSON.stringify(meta, null, 2) + '\n', 'utf8')
-console.log(`wrote ${metaPath}`)
 
 async function syncViaGit(repo, sha, files, dest) {
   const tmp = await mkdtemp(join(tmpdir(), 'ifx-docs-'))

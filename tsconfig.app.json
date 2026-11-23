@@ -23,5 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "content/docs-meta.json"]
+  "include": ["src", "content/docs-meta.json", "seo.config.json"]
 }
