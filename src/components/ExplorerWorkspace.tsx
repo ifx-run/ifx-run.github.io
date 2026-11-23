@@ -42,6 +42,9 @@ import {
   clearGlobalAddressAlias,
   getGlobalAddressAlias,
   hasGlobalAddressAlias,
+  listGlobalAddressAliases,
+  MAX_GLOBAL_ADDRESS_ALIASES,
+  replaceGlobalAddressAliases,
   setGlobalAddressAlias,
 } from '../lib/solana/global-alias-storage'
 import {
@@ -96,6 +99,7 @@ export function ExplorerWorkspace() {
   const [ingressExpanded, setIngressExpanded] = useState(true)
   /** Bumps when aliases change without a wire-key change (e.g. import). */
   const [aliasEpoch, setAliasEpoch] = useState(0)
+  const [globalAliasOpen, setGlobalAliasOpen] = useState(false)
 
   const applyResult = useCallback(
     (explored: ExploredTransaction, rawWire: string) => {
@@ -427,6 +431,14 @@ export function ExplorerWorkspace() {
             <button
               type="button"
               className="ghost tiny"
+              title={t.globalAliasManagerTitle}
+              onClick={() => setGlobalAliasOpen(true)}
+            >
+              {t.globalAliasManager}
+            </button>
+            <button
+              type="button"
+              className="ghost tiny"
               title={t.annotationImportTitle}
               onClick={() => importFileRef.current?.click()}
             >
@@ -523,6 +535,16 @@ export function ExplorerWorkspace() {
           </>
         )}
       </form>
+
+      {globalAliasOpen && (
+        <GlobalAliasManagerModal
+          onClose={() => setGlobalAliasOpen(false)}
+          onSaved={() => {
+            setAliasEpoch((n) => n + 1)
+            setGlobalAliasOpen(false)
+          }}
+        />
+      )}
 
       {showSigRpc && (
         <section className="panel sig-rpc-panel" aria-live="polite">
@@ -1400,6 +1422,182 @@ function ConfirmModal({
             >
               {confirmLabel}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type GlobalAliasDraftRow = {
+  id: string
+  address: string
+  name: string
+  createdAt: number
+}
+
+function GlobalAliasManagerModal({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const { t } = useApp()
+  const [rows, setRows] = useState<GlobalAliasDraftRow[]>(() =>
+    listGlobalAddressAliases().map((e) => ({
+      id: `${e.address}:${e.createdAt}`,
+      address: e.address,
+      name: e.name,
+      createdAt: e.createdAt,
+    })),
+  )
+
+  useEffect(() => {
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  function addRow() {
+    setRows((prev) => [
+      {
+        id: `new:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+        address: '',
+        name: '',
+        createdAt: Date.now(),
+      },
+      ...prev,
+    ])
+  }
+
+  function updateRow(
+    id: string,
+    patch: Partial<Pick<GlobalAliasDraftRow, 'address' | 'name'>>,
+  ) {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+    )
+  }
+
+  function removeRow(id: string) {
+    setRows((prev) => prev.filter((r) => r.id !== id))
+  }
+
+  function save() {
+    replaceGlobalAddressAliases(
+      rows.map((r) => ({
+        address: r.address,
+        name: r.name,
+        createdAt: r.createdAt,
+      })),
+    )
+    onSaved()
+  }
+
+  const filledCount = rows.filter(
+    (r) => r.address.trim() && r.name.trim(),
+  ).length
+
+  return (
+    <div
+      className="refs-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="refs-modal global-alias-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-alias-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="refs-modal-head">
+          <h3 id="global-alias-modal-title">{t.globalAliasManagerTitle}</h3>
+          <button type="button" className="ghost tiny" onClick={onClose}>
+            {t.frameRenameCancel}
+          </button>
+        </div>
+        <div className="global-alias-modal-body">
+          <p className="global-alias-hint muted">
+            {t.globalAliasManagerHint(
+              filledCount,
+              MAX_GLOBAL_ADDRESS_ALIASES,
+            )}
+          </p>
+          <div className="global-alias-table-wrap">
+            {rows.length === 0 ? (
+              <p className="global-alias-empty muted">{t.globalAliasEmpty}</p>
+            ) : (
+              <table className="global-alias-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t.globalAliasColName}</th>
+                    <th scope="col">{t.globalAliasColAddress}</th>
+                    <th scope="col">
+                      <span className="visually-hidden">
+                        {t.globalAliasRemove}
+                      </span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id}>
+                      <td>
+                        <input
+                          className="global-alias-input"
+                          value={row.name}
+                          onChange={(e) =>
+                            updateRow(row.id, { name: e.target.value })
+                          }
+                          placeholder={t.globalAliasColName}
+                          spellCheck={false}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="global-alias-input is-mono"
+                          value={row.address}
+                          onChange={(e) =>
+                            updateRow(row.id, { address: e.target.value })
+                          }
+                          placeholder={t.globalAliasColAddress}
+                          spellCheck={false}
+                          autoComplete="off"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="ghost tiny"
+                          title={t.globalAliasRemove}
+                          aria-label={t.globalAliasRemove}
+                          onClick={() => removeRow(row.id)}
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="global-alias-modal-actions">
+            <button type="button" className="ghost" onClick={addRow}>
+              {t.globalAliasAdd}
+            </button>
+            <div className="global-alias-modal-actions-end">
+              <button type="button" className="ghost" onClick={onClose}>
+                {t.frameRenameCancel}
+              </button>
+              <button type="button" className="primary" onClick={save}>
+                {t.globalAliasSave}
+              </button>
+            </div>
           </div>
         </div>
       </div>

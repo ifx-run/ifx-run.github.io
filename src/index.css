@@ -1330,6 +1330,115 @@ a.tx-signature-solscan:hover {
   gap: 0.5rem;
   margin-top: 0.25rem;
 }
+
+.global-alias-modal {
+  width: min(720px, 100%);
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+}
+.global-alias-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem 1rem;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.global-alias-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.global-alias-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.global-alias-empty {
+  margin: 0;
+  padding: 1.25rem 1rem;
+  font-size: 0.88rem;
+}
+.global-alias-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.global-alias-table th,
+.global-alias-table td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  vertical-align: middle;
+  text-align: left;
+}
+.global-alias-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-elev);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.global-alias-table tr:last-child td {
+  border-bottom: none;
+}
+.global-alias-table td:last-child {
+  width: 2.5rem;
+  text-align: center;
+}
+.global-alias-input {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text);
+  padding: 0.35rem 0.4rem;
+  font: inherit;
+}
+.global-alias-input.is-mono {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.global-alias-input:hover {
+  border-color: var(--line);
+}
+.global-alias-input:focus {
+  outline: none;
+  border-color: var(--focus);
+  background: var(--bg-elev);
+}
+.global-alias-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.global-alias-modal-actions-end {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .l1-raw {
   margin-top: 0.5rem;
   font-size: 0.82rem;
