@@ -12,6 +12,7 @@
     "dev": "vite",
     "prebuild": "node scripts/sync-docs.mjs",
     "build": "tsc -b && vite build && node scripts/seo-prerender.mjs && node scripts/copy-404.mjs",
+    "submit:indexnow": "node scripts/submit-indexnow.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
