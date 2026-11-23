@@ -20,6 +20,8 @@ export default function App() {
             <Route path="explorer/:ingress" element={<ExplorerWorkspace />} />
             <Route path="docs" element={<DocsIndexPage />} />
             <Route path="docs/:slug" element={<DocsArticlePage />} />
+            <Route path="zh/docs" element={<DocsIndexPage />} />
+            <Route path="zh/docs/:slug" element={<DocsArticlePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

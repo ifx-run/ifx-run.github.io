@@ -14,9 +14,9 @@ const SLUGS = new Set(DOC_ENTRIES.map((d) => d.slug))
 
 /**
  * Rewrite relative markdown links:
- * - `./foo.md` / `docs/foo.md` → `/docs/foo?lang=en`
- * - `./foo.zh-CN.md` → `/docs/foo?lang=zh`
- * - `README.md` / `README.zh-CN.md` → `/docs/readme`
+ * - `./foo.md` / `docs/foo.md` → `/docs/foo`
+ * - `./foo.zh-CN.md` → `/zh/docs/foo`
+ * - `README.md` / `README.zh-CN.md` → `/docs/readme` / `/zh/docs/readme`
  * - otherwise → GitHub blob URL
  */
 export function rewriteDocLinks(md: string): string {
@@ -53,9 +53,8 @@ export function rewriteDocLinks(md: string): string {
       if (/^readme$/i.test(base)) base = 'readme'
 
       if (SLUGS.has(base)) {
-        const lang = isZh ? 'zh' : 'en'
-        const q = `?lang=${lang}`
-        return `[${label}](/docs/${base}${q}${hash ? `#${hash}` : ''})`
+        const path = isZh ? `/zh/docs/${base}` : `/docs/${base}`
+        return `[${label}](${path}${hash ? `#${hash}` : ''})`
       }
       const blob = file.startsWith('docs/')
         ? `${GITHUB_BLOB}${file}`

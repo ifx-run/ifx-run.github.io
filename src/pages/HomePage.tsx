@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import { docsIndexPath } from '../lib/docs/paths'
 
 export function HomePage() {
-  const { t } = useApp()
+  const { t, lang } = useApp()
 
   return (
     <section className="home">
@@ -35,7 +36,7 @@ export function HomePage() {
             <Link to="/explorer" className="cta cta-primary">
               {t.ctaExplorer}
             </Link>
-            <Link to="/docs" className="cta cta-secondary">
+            <Link to={docsIndexPath(lang)} className="cta cta-secondary">
               {t.ctaDocs}
               <span className="cta-arrow" aria-hidden="true">
                 →

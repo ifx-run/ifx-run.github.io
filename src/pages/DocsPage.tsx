@@ -2,6 +2,7 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import {
   Link,
   Navigate,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -14,6 +15,11 @@ import {
   docTitle,
   getDoc,
 } from '../lib/docs/catalog'
+import {
+  docsArticlePath,
+  docsIndexPath,
+  langFromDocsPathname,
+} from '../lib/docs/paths'
 import { renderMarkdown } from '../lib/docs/render'
 import type { Lang } from '../lib/i18n'
 
@@ -22,47 +28,38 @@ export function parseLangParam(raw: string | null): Lang | null {
   return null
 }
 
-/**
- * One-way: URL ?lang= → app language.
- * Do not write URL here — that fought in-doc navigations and caused flicker.
- */
-function useLangFromSearchParams() {
+/** Route path is the source of truth for docs language. */
+function useLangFromDocsPath() {
   const { lang, setLang } = useApp()
-  const [params] = useSearchParams()
-  const urlLang = params.get('lang')
+  const { pathname } = useLocation()
 
   useEffect(() => {
-    const fromUrl = parseLangParam(urlLang)
-    if (fromUrl && fromUrl !== lang) setLang(fromUrl)
-    // Depend on the primitive string, not `lang`, so we only react to URL edits.
+    const fromPath = langFromDocsPathname(pathname)
+    if (fromPath && fromPath !== lang) setLang(fromPath)
+    // Only react to path; avoid fighting in-doc navigations with `lang` in deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [urlLang, setLang])
+  }, [pathname, setLang])
 }
 
-/** If the URL has no ?lang=, seed it once from current app language. */
-function useSeedLangQuery() {
-  const { lang } = useApp()
-  const [params, setSearchParams] = useSearchParams()
+/** Old `?lang=` bookmarks → `/docs…` or `/zh/docs…`. */
+function useRedirectLegacyLangQuery() {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const { slug } = useParams()
 
   useEffect(() => {
-    if (params.get('lang')) return
-    setSearchParams(
-      (prev) => {
-        if (prev.get('lang')) return prev
-        const next = new URLSearchParams(prev)
-        next.set('lang', lang)
-        return next
-      },
-      { replace: true },
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once per mount/path
-  }, [setSearchParams])
+    const q = parseLangParam(params.get('lang'))
+    if (!q) return
+    const target = slug ? docsArticlePath(slug, q) : docsIndexPath(q)
+    navigate(target, { replace: true })
+  }, [navigate, params, pathname, slug])
 }
 
 export function DocsIndexPage() {
   const { t, lang } = useApp()
-  useLangFromSearchParams()
-  useSeedLangQuery()
+  useLangFromDocsPath()
+  useRedirectLegacyLangQuery()
 
   return (
     <div className="docs-layout">
@@ -81,7 +78,7 @@ export function DocsIndexPage() {
         <ul className="docs-index-list">
           {DOC_ENTRIES.map((d) => (
             <li key={d.slug}>
-              <Link to={`/docs/${d.slug}?lang=${lang}`}>{docTitle(d, lang)}</Link>
+              <Link to={docsArticlePath(d.slug, lang)}>{docTitle(d, lang)}</Link>
             </li>
           ))}
         </ul>
@@ -99,8 +96,8 @@ export function DocsArticlePage() {
   const [html, setHtml] = useState<string>('')
   const [err, setErr] = useState<string | null>(null)
 
-  useLangFromSearchParams()
-  useSeedLangQuery()
+  useLangFromDocsPath()
+  useRedirectLegacyLangQuery()
 
   useEffect(() => {
     if (!entry) return
@@ -128,8 +125,21 @@ export function DocsArticlePage() {
       e.preventDefault()
       try {
         const url = new URL(href, window.location.origin)
-        const nextLang = parseLangParam(url.searchParams.get('lang'))
-        if (nextLang) setLang(nextLang)
+        const pathLang = langFromDocsPathname(url.pathname)
+        if (pathLang) setLang(pathLang)
+        // Legacy in-content ?lang= links
+        const qLang = parseLangParam(url.searchParams.get('lang'))
+        if (qLang) {
+          const s = url.pathname.replace(/^\/(?:zh\/)?docs\/?/, '') || null
+          const articleSlug = s && !s.includes('/') ? s : null
+          navigate(
+            articleSlug
+              ? docsArticlePath(articleSlug, qLang)
+              : docsIndexPath(qLang),
+            { replace: true },
+          )
+          return
+        }
         navigate(`${url.pathname}${url.search}${url.hash}`)
       } catch {
         navigate(href)
@@ -137,7 +147,7 @@ export function DocsArticlePage() {
     }
   }
 
-  if (!slug || !entry) return <Navigate to="/docs" replace />
+  if (!slug || !entry) return <Navigate to={docsIndexPath(lang)} replace />
 
   return (
     <div className="docs-layout">
@@ -170,13 +180,16 @@ function DocsNav({ active }: { active?: string }) {
   const { lang } = useApp()
   return (
     <nav aria-label="Docs">
-      <Link to={`/docs?lang=${lang}`} className={!active ? 'active' : undefined}>
+      <Link
+        to={docsIndexPath(lang)}
+        className={!active ? 'active' : undefined}
+      >
         Index
       </Link>
       {DOC_ENTRIES.map((d) => (
         <Link
           key={d.slug}
-          to={`/docs/${d.slug}?lang=${lang}`}
+          to={docsArticlePath(d.slug, lang)}
           className={active === d.slug ? 'active' : undefined}
         >
           {docTitle(d, lang)}

@@ -142,16 +142,41 @@ async function listDocSlugs() {
     .sort()
 }
 
-async function readDocMarkdown(slug) {
+async function readDocMarkdown(slug, lang = 'en') {
+  const primary =
+    lang === 'zh' ? `${slug}.zh-CN.md` : `${slug}.md`
+  const fallback =
+    lang === 'zh' ? `${slug}.md` : `${slug}.zh-CN.md`
   try {
-    return await readFile(join(docsDir, `${slug}.md`), 'utf8')
+    return await readFile(join(docsDir, primary), 'utf8')
   } catch {
     try {
-      return await readFile(join(docsDir, `${slug}.zh-CN.md`), 'utf8')
+      return await readFile(join(docsDir, fallback), 'utf8')
     } catch {
       return ''
     }
   }
+}
+
+function hreflangLinks(slug) {
+  if (slug) {
+    return [
+      `<link rel="alternate" hreflang="en" href="${ORIGIN}/docs/${slug}" />`,
+      `<link rel="alternate" hreflang="zh-CN" href="${ORIGIN}/zh/docs/${slug}" />`,
+      `<link rel="alternate" hreflang="x-default" href="${ORIGIN}/docs/${slug}" />`,
+    ].join('\n    ')
+  }
+  return [
+    `<link rel="alternate" hreflang="en" href="${ORIGIN}/docs" />`,
+    `<link rel="alternate" hreflang="zh-CN" href="${ORIGIN}/zh/docs" />`,
+    `<link rel="alternate" hreflang="x-default" href="${ORIGIN}/docs" />`,
+  ].join('\n    ')
+}
+
+function injectHreflang(html, slug) {
+  const block = hreflangLinks(slug)
+  if (html.includes('hreflang="x-default"')) return html
+  return html.replace('</head>', `    ${block}\n  </head>`)
 }
 
 async function writeRoute(relDir, html) {
@@ -186,29 +211,50 @@ const routes = [
     title: seo.pages.docs.title,
     description: seo.pages.docs.description,
     ogType: 'website',
+    docsIndex: true,
+  },
+  {
+    dir: join('zh', 'docs'),
+    path: '/zh/docs',
+    title: '文档 — Ifx 设计与实现',
+    description:
+      'Ifx 设计、术语表、Frame 权限、CPI patch、typed let 与调试说明。',
+    ogType: 'website',
+    docsIndex: true,
+    htmlLang: 'zh-CN',
   },
 ]
 
 for (const r of routes) {
-  const html = patchHead(template, {
+  let html = patchHead(template, {
     title: r.title,
     description: r.description,
     canonical: `${ORIGIN}${r.path === '/' ? '/' : r.path}`,
     ogType: r.ogType,
   })
+  if (r.htmlLang) {
+    html = html.replace(/<html\s+lang="[^"]*"/i, `<html lang="${r.htmlLang}"`)
+  }
+  if (r.docsIndex) html = injectHreflang(html, null)
   const file = await writeRoute(r.dir, html)
   console.log('seo:', file.replace(root + '/', ''))
 }
 
-for (const slug of slugs) {
-  const titles = seo.docTitles?.[slug] ?? { en: slug }
-  const title = `${titles.en} — Ifx Docs`
-  const description = `Ifx docs: ${titles.en}. On-chain Solana orchestration — design and implementation notes.`
-  const canonical = `${ORIGIN}/docs/${slug}`
-  const md = await readDocMarkdown(slug)
+async function writeDocPage(slug, lang) {
+  const titles = seo.docTitles?.[slug] ?? { en: slug, zh: slug }
+  const label = lang === 'zh' ? titles.zh ?? titles.en : titles.en
+  const title =
+    lang === 'zh' ? `${label} — Ifx 文档` : `${label} — Ifx Docs`
+  const description =
+    lang === 'zh'
+      ? `Ifx 文档：${label}。Solana 链上编排的设计与实现说明。`
+      : `Ifx docs: ${titles.en}. On-chain Solana orchestration — design and implementation notes.`
+  const path = lang === 'zh' ? `/zh/docs/${slug}` : `/docs/${slug}`
+  const canonical = `${ORIGIN}${path}`
+  const md = await readDocMarkdown(slug, lang)
   const bodyHtml = md ? await renderMarkdown(md) : ''
   const noscript = bodyHtml
-    ? `      <article class="docs-article">\n        <h1>${esc(titles.en)}</h1>\n        <div class="md-body">${bodyHtml}</div>\n      </article>`
+    ? `      <article class="docs-article">\n        <h1>${esc(label)}</h1>\n        <div class="md-body">${bodyHtml}</div>\n      </article>`
     : ''
 
   let html = patchHead(template, {
@@ -217,17 +263,20 @@ for (const slug of slugs) {
     canonical,
     ogType: 'article',
   })
+  if (lang === 'zh') {
+    html = html.replace(/<html\s+lang="[^"]*"/i, '<html lang="zh-CN"')
+  }
+  html = injectHreflang(html, slug)
   html = injectNoscript(html, noscript)
 
-  // TechArticle JSON-LD (text for AI/crawlers; does not affect the SPA UI)
   if (md) {
     const ld = {
       '@context': 'https://schema.org',
       '@type': 'TechArticle',
-      headline: titles.en,
+      headline: label,
       description,
       url: canonical,
-      inLanguage: 'en',
+      inLanguage: lang === 'zh' ? 'zh-CN' : 'en',
       isPartOf: { '@type': 'WebSite', name: 'Ifx', url: ORIGIN },
       author: { '@type': 'Organization', name: 'Ifx' },
     }
@@ -237,8 +286,14 @@ for (const slug of slugs) {
     )
   }
 
-  const file = await writeRoute(join('docs', slug), html)
+  const dir = lang === 'zh' ? join('zh', 'docs', slug) : join('docs', slug)
+  const file = await writeRoute(dir, html)
   console.log('seo:', file.replace(root + '/', ''))
+}
+
+for (const slug of slugs) {
+  await writeDocPage(slug, 'en')
+  await writeDocPage(slug, 'zh')
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -246,10 +301,11 @@ const urls = [
   { loc: `${ORIGIN}/`, priority: '1.0' },
   { loc: `${ORIGIN}/explorer`, priority: '0.9' },
   { loc: `${ORIGIN}/docs`, priority: '0.9' },
-  ...slugs.map((slug) => ({
-    loc: `${ORIGIN}/docs/${slug}`,
-    priority: '0.8',
-  })),
+  { loc: `${ORIGIN}/zh/docs`, priority: '0.9' },
+  ...slugs.flatMap((slug) => [
+    { loc: `${ORIGIN}/docs/${slug}`, priority: '0.8' },
+    { loc: `${ORIGIN}/zh/docs/${slug}`, priority: '0.8' },
+  ]),
 ]
 
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

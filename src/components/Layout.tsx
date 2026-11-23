@@ -1,26 +1,20 @@
-import { NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import { docsIndexPath, docsPathForLang } from '../lib/docs/paths'
 import { DEFAULT_IFX_PROGRAM_ID } from '../lib/ifx/program-ids'
 
 export function Layout() {
   const { t, lang, setLang } = useApp()
   const { pathname } = useLocation()
-  const [, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const isHome = pathname === '/'
 
   function onToggleLang() {
     const next = lang === 'en' ? 'zh' : 'en'
     setLang(next)
-    // On docs routes, update ?lang= in the same gesture (no reverse sync effect).
-    if (pathname.startsWith('/docs')) {
-      setSearchParams(
-        (prev) => {
-          const nextParams = new URLSearchParams(prev)
-          nextParams.set('lang', next)
-          return nextParams
-        },
-        { replace: true },
-      )
+    const nextPath = docsPathForLang(pathname, next)
+    if (nextPath !== pathname) {
+      navigate(nextPath, { replace: true })
     }
   }
 
@@ -34,7 +28,7 @@ export function Layout() {
         )}
         <nav className="topbar-nav" aria-label="Primary">
           <NavLink to="/explorer">{t.navExplorer}</NavLink>
-          <NavLink to="/docs">{t.navDocs}</NavLink>
+          <NavLink to={docsIndexPath(lang)}>{t.navDocs}</NavLink>
           <a
             href="https://github.com/ifx-run/ifx"
             target="_blank"

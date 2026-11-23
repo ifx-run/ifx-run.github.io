@@ -19,7 +19,7 @@ function upsertMeta(
 
 function upsertLink(rel: string, href: string) {
   let el = document.head.querySelector(
-    `link[rel="${rel}"]`,
+    `link[rel="${rel}"]:not([hreflang])`,
   ) as HTMLLinkElement | null
   if (!el) {
     el = document.createElement('link')
@@ -27,6 +27,20 @@ function upsertLink(rel: string, href: string) {
     document.head.appendChild(el)
   }
   el.href = href
+}
+
+function syncHreflang(alternates: { lang: string; href: string }[] | undefined) {
+  document.head
+    .querySelectorAll('link[rel="alternate"][hreflang]')
+    .forEach((n) => n.remove())
+  if (!alternates?.length) return
+  for (const alt of alternates) {
+    const el = document.createElement('link')
+    el.rel = 'alternate'
+    el.hreflang = alt.lang
+    el.href = alt.href
+    document.head.appendChild(el)
+  }
 }
 
 /**
@@ -39,11 +53,17 @@ export function DocumentHead() {
   useEffect(() => {
     const meta = resolveSeoMeta(pathname)
     document.title = meta.title
+    if (meta.htmlLang) document.documentElement.lang = meta.htmlLang
 
     upsertMeta('name', 'description', meta.description)
-    upsertMeta('name', 'robots', meta.noindex ? 'noindex,follow' : 'index,follow')
+    upsertMeta(
+      'name',
+      'robots',
+      meta.noindex ? 'noindex,follow' : 'index,follow',
+    )
 
     upsertLink('canonical', meta.canonical)
+    syncHreflang(meta.alternates)
 
     upsertMeta('property', 'og:title', meta.title)
     upsertMeta('property', 'og:description', meta.description)
@@ -51,6 +71,11 @@ export function DocumentHead() {
     upsertMeta('property', 'og:type', meta.ogType ?? 'website')
     upsertMeta('property', 'og:site_name', SEO.siteName)
     upsertMeta('property', 'og:image', SEO.ogImageUrl)
+    if (meta.htmlLang === 'zh-CN') {
+      upsertMeta('property', 'og:locale', 'zh_CN')
+    } else {
+      upsertMeta('property', 'og:locale', 'en_US')
+    }
 
     upsertMeta('name', 'twitter:card', 'summary_large_image')
     upsertMeta('name', 'twitter:title', meta.title)
