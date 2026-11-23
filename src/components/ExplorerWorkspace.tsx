@@ -10,8 +10,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import {
+  explorerIngressFromLocationSearch,
+  explorerIngressFromSearchParams,
+} from '../lib/explorer-params'
 import {
   exploreFromWire,
   exploreFromWireResolvingAlts,
@@ -79,6 +83,7 @@ const AUTO_DECODE_MS = 280
 
 export function ExplorerWorkspace() {
   const { t } = useApp()
+  const [searchParams] = useSearchParams()
   const inputId = useId()
   const rpcId = useId()
   const sigRpcId = useId()
@@ -86,8 +91,12 @@ export function ExplorerWorkspace() {
   const decodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ingressRef = useRef<HTMLFormElement | null>(null)
   const importFileRef = useRef<HTMLInputElement | null>(null)
+  /** Avoid re-applying the same deep-link when searchParams identity churns. */
+  const bootstrappedUrlRef = useRef<string | null>(null)
 
-  const [input, setInput] = useState(() => getStoredWire())
+  const [input, setInput] = useState(
+    () => explorerIngressFromLocationSearch() ?? getStoredWire(),
+  )
   const [rpcDraft, setRpcDraft] = useState(() => getStoredRpcUrl())
   const [result, setResult] = useState<ExploredTransaction | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -192,6 +201,41 @@ export function ExplorerWorkspace() {
     [loadWire],
   )
 
+  const fetchBySignature = useCallback(
+    async (sigOverride?: string, rpcOverride?: string) => {
+      const sig = (sigOverride ?? input).trim()
+      const rpc = (rpcOverride ?? rpcDraft).trim()
+      if (!looksLikeSignature(sig) || !rpc) return
+
+      abortRef.current?.abort()
+      const ac = new AbortController()
+      abortRef.current = ac
+
+      setStoredRpcUrl(rpc)
+      setFetchingSig(true)
+      setSigFetchError(null)
+      setError(null)
+
+      try {
+        const { signature, wireBase64 } = await fetchWireBySignature(
+          sig,
+          rpc,
+          ac.signal,
+        )
+        if (ac.signal.aborted) return
+        // Same RPC continues into ALT resolve when the wire needs it.
+        applyWireFromSignature(String(signature), wireBase64, rpc)
+      } catch (e) {
+        if (ac.signal.aborted) return
+        if (e instanceof Error) setSigFetchError(e.message)
+        else setSigFetchError(t.errorGeneric)
+      } finally {
+        if (!ac.signal.aborted) setFetchingSig(false)
+      }
+    },
+    [applyWireFromSignature, input, rpcDraft, t],
+  )
+
   const run = useCallback(
     (raw: string) => {
       const value = raw.trim()
@@ -210,14 +254,23 @@ export function ExplorerWorkspace() {
         setResult(null)
         setError(null)
         setRpcError(null)
+        setSigFetchError(null)
         setIngressExpanded(true)
+        const rpc = rpcDraft.trim() || getStoredRpcUrl().trim()
+        if (rpc) void fetchBySignature(value, rpc)
         return
       }
 
       abortRef.current?.abort()
       loadWire(value)
     },
-    [applyWireFromSignature, clearResult, loadWire],
+    [
+      applyWireFromSignature,
+      clearResult,
+      fetchBySignature,
+      loadWire,
+      rpcDraft,
+    ],
   )
 
   const scheduleRun = useCallback(
@@ -242,15 +295,32 @@ export function ExplorerWorkspace() {
     [clearResult, run],
   )
 
+  const searchKey = searchParams.toString()
+
   useEffect(() => {
+    const fromUrl = explorerIngressFromSearchParams(searchParams)
+    if (fromUrl) {
+      if (bootstrappedUrlRef.current === fromUrl) return
+      bootstrappedUrlRef.current = fromUrl
+      setInput(fromUrl)
+      setStoredWire(fromUrl)
+      run(fromUrl)
+      return
+    }
+    // No deep-link: restore localStorage only on the first bootstrap.
+    if (bootstrappedUrlRef.current !== null) return
+    bootstrappedUrlRef.current = ''
     const stored = getStoredWire()
     if (stored) run(stored)
+    // Bootstrap from ?hash=/?sig=/?tx= (or localStorage); later edits use onInputChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey])
+
+  useEffect(() => {
     return () => {
       abortRef.current?.abort()
       if (decodeTimer.current) clearTimeout(decodeTimer.current)
     }
-    // Restore once on mount; later edits go through onInputChange.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -273,38 +343,6 @@ export function ExplorerWorkspace() {
     if (!value || !rpc) return
     await resolveAltsForWire(value, rpc)
   }, [input, resolveAltsForWire, rpcDraft])
-
-  const fetchBySignature = useCallback(async () => {
-    const sig = input.trim()
-    const rpc = rpcDraft.trim()
-    if (!looksLikeSignature(sig) || !rpc) return
-
-    abortRef.current?.abort()
-    const ac = new AbortController()
-    abortRef.current = ac
-
-    setStoredRpcUrl(rpc)
-    setFetchingSig(true)
-    setSigFetchError(null)
-    setError(null)
-
-    try {
-      const { signature, wireBase64 } = await fetchWireBySignature(
-        sig,
-        rpc,
-        ac.signal,
-      )
-      if (ac.signal.aborted) return
-      // Same RPC continues into ALT resolve when the wire needs it.
-      applyWireFromSignature(String(signature), wireBase64, rpc)
-    } catch (e) {
-      if (ac.signal.aborted) return
-      if (e instanceof Error) setSigFetchError(e.message)
-      else setSigFetchError(t.errorGeneric)
-    } finally {
-      if (!ac.signal.aborted) setFetchingSig(false)
-    }
-  }, [applyWireFromSignature, input, rpcDraft, t])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
