@@ -112,22 +112,73 @@ export function ExplorerWorkspace() {
     setIngressExpanded(true)
   }, [])
 
-  const applyWireFromSignature = useCallback(
-    (sig: string, wire: string) => {
-      rememberSignatureWire(sig, wire)
-      setInput(wire)
-      setStoredWire(wire)
+  const resolveAltsForWire = useCallback(
+    async (wire: string, rpc: string) => {
+      const value = wire.trim()
+      const rpcUrl = rpc.trim()
+      if (!value || !rpcUrl) return
+
+      abortRef.current?.abort()
+      const ac = new AbortController()
+      abortRef.current = ac
+
+      setStoredRpcUrl(rpcUrl)
+      setResolving(true)
+      setRpcError(null)
+
+      try {
+        const explored = await exploreFromWireResolvingAlts(
+          value,
+          rpcUrl,
+          ac.signal,
+        )
+        if (!ac.signal.aborted) applyResult(explored, value)
+      } catch (e) {
+        if (ac.signal.aborted) return
+        if (e instanceof Error) setRpcError(e.message)
+        else setRpcError(t.errorGeneric)
+      } finally {
+        if (!ac.signal.aborted) setResolving(false)
+      }
+    },
+    [applyResult, t],
+  )
+
+  /** Offline decode; if ALTs need RPC and we already have a URL, resolve in one step. */
+  const loadWire = useCallback(
+    (wire: string, rpcHint?: string) => {
+      const value = wire.trim()
+      if (!value) {
+        clearResult()
+        return
+      }
       setError(null)
+      setRpcError(null)
       setSigFetchError(null)
       try {
-        applyResult(exploreFromWire(wire), wire)
+        const explored = exploreFromWire(value)
+        applyResult(explored, value)
+        const rpc = (rpcHint ?? rpcDraft).trim()
+        if (explored.needsAltRpc && rpc) {
+          void resolveAltsForWire(value, rpc)
+        }
       } catch (e) {
         setResult(null)
         if (e instanceof Error) setError(e.message)
         else setError(t.errorGeneric)
       }
     },
-    [applyResult, t],
+    [applyResult, clearResult, resolveAltsForWire, rpcDraft, t],
+  )
+
+  const applyWireFromSignature = useCallback(
+    (sig: string, wire: string, rpcHint?: string) => {
+      rememberSignatureWire(sig, wire)
+      setInput(wire)
+      setStoredWire(wire)
+      loadWire(wire, rpcHint)
+    },
+    [loadWire],
   )
 
   const run = useCallback(
@@ -153,22 +204,9 @@ export function ExplorerWorkspace() {
       }
 
       abortRef.current?.abort()
-      setError(null)
-      setRpcError(null)
-      setSigFetchError(null)
-
-      try {
-        applyResult(exploreFromWire(value), value)
-      } catch (e) {
-        setResult(null)
-        if (e instanceof Error) {
-          setError(e.message)
-        } else {
-          setError(t.errorGeneric)
-        }
-      }
+      loadWire(value)
     },
-    [applyResult, applyWireFromSignature, clearResult, t],
+    [applyWireFromSignature, clearResult, loadWire],
   )
 
   const scheduleRun = useCallback(
@@ -222,29 +260,8 @@ export function ExplorerWorkspace() {
     const value = input.trim()
     const rpc = rpcDraft.trim()
     if (!value || !rpc) return
-
-    abortRef.current?.abort()
-    const ac = new AbortController()
-    abortRef.current = ac
-
-    setStoredRpcUrl(rpc)
-    setResolving(true)
-    setRpcError(null)
-
-    try {
-      const explored = await exploreFromWireResolvingAlts(value, rpc, ac.signal)
-      if (!ac.signal.aborted) applyResult(explored, value)
-    } catch (e) {
-      if (ac.signal.aborted) return
-      if (e instanceof Error) {
-        setRpcError(e.message)
-      } else {
-        setRpcError(t.errorGeneric)
-      }
-    } finally {
-      if (!ac.signal.aborted) setResolving(false)
-    }
-  }, [applyResult, input, rpcDraft, t])
+    await resolveAltsForWire(value, rpc)
+  }, [input, resolveAltsForWire, rpcDraft])
 
   const fetchBySignature = useCallback(async () => {
     const sig = input.trim()
@@ -267,7 +284,8 @@ export function ExplorerWorkspace() {
         ac.signal,
       )
       if (ac.signal.aborted) return
-      applyWireFromSignature(String(signature), wireBase64)
+      // Same RPC continues into ALT resolve when the wire needs it.
+      applyWireFromSignature(String(signature), wireBase64, rpc)
     } catch (e) {
       if (ac.signal.aborted) return
       if (e instanceof Error) setSigFetchError(e.message)
