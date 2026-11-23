@@ -325,3 +325,20 @@ ${urls
 
 await writeFile(join(dist, 'sitemap.xml'), sitemap, 'utf8')
 console.log('seo: dist/sitemap.xml')
+
+// llms-full.txt — English docs snapshot for AI crawlers (UX unchanged).
+const fullParts = [
+  '# Ifx — full documentation snapshot (English)',
+  '',
+  '> Generated at build from content/docs. Canonical HTML: https://ifx.run/docs',
+  '> Program: https://github.com/ifx-run/ifx · SDK: https://www.npmjs.com/package/@ifx-run/sdk',
+  '',
+]
+for (const slug of slugs) {
+  const titles = seo.docTitles?.[slug] ?? { en: slug }
+  const md = await readDocMarkdown(slug, 'en')
+  if (!md.trim()) continue
+  fullParts.push(`\n\n---\n\n# ${titles.en}\n\nSource: ${ORIGIN}/docs/${slug}\n\n${md.trim()}\n`)
+}
+await writeFile(join(dist, 'llms-full.txt'), fullParts.join(''), 'utf8')
+console.log('seo: dist/llms-full.txt')

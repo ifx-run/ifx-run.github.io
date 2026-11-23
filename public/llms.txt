@@ -1,0 +1,50 @@
+# Ifx
+
+> Ifx is on-chain Solana orchestration: read state, branch, and CPI inside one transaction without deploying a new wrapper program each time. **ifx.run** is the official site — an offline wire explorer for Ifx instructions and SIMD-0385 v1 packets, plus synced design docs.
+
+Ifx (program) and ifx.run (this site) are distinct: the explorer is read-only decode/display; it does not compose or send transactions.
+
+## Site
+
+- [Home](https://ifx.run/): Product overview
+- [Explorer](https://ifx.run/explorer): Paste wire (hex / base58 / base64) or a signature; decode Ifx + known Solana programs offline (RPC only for signatures / ALTs)
+- [Docs (EN)](https://ifx.run/docs): Design and implementation
+- [Docs (ZH)](https://ifx.run/zh/docs): 中文文档
+
+## Docs (English)
+
+- [README](https://ifx.run/docs/readme)
+- [Design](https://ifx.run/docs/design)
+- [Glossary](https://ifx.run/docs/glossary)
+- [Implementation](https://ifx.run/docs/implementation)
+- [Frame authority](https://ifx.run/docs/frame-authority)
+- [Bundles](https://ifx.run/docs/bundles)
+- [Structured CPI patches](https://ifx.run/docs/structured-cpi-patches)
+- [Raw CPI patches](https://ifx.run/docs/raw-cpi-patches)
+- [Errors](https://ifx.run/docs/errors)
+- [Debugging](https://ifx.run/docs/debugging)
+- [Typed let bindings](https://ifx.run/docs/typed-let-bindings)
+
+## Docs (Chinese)
+
+- [README](https://ifx.run/zh/docs/readme)
+- [设计](https://ifx.run/zh/docs/design)
+- [术语表](https://ifx.run/zh/docs/glossary)
+- [实现](https://ifx.run/zh/docs/implementation)
+- [Frame 权限](https://ifx.run/zh/docs/frame-authority)
+- [Bundles](https://ifx.run/zh/docs/bundles)
+- [结构化 CPI patch](https://ifx.run/zh/docs/structured-cpi-patches)
+- [Raw CPI patch](https://ifx.run/zh/docs/raw-cpi-patches)
+- [错误码](https://ifx.run/zh/docs/errors)
+- [调试](https://ifx.run/zh/docs/debugging)
+- [Typed let 绑定](https://ifx.run/zh/docs/typed-let-bindings)
+
+## Related
+
+- [GitHub: ifx-run/ifx](https://github.com/ifx-run/ifx): On-chain program source
+- [npm: @ifx-run/sdk](https://www.npmjs.com/package/@ifx-run/sdk): Client SDK
+- [Full text for LLMs](https://ifx.run/llms-full.txt): Concatenated English docs snapshot
+
+## Optional
+
+- Explorer deep links: `https://ifx.run/explorer/<signature-or-wire>` (tool URLs; prefer the bare `/explorer` landing page for citations)
