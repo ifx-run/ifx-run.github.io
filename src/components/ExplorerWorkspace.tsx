@@ -1260,7 +1260,9 @@ function InstructionList({
                 </span>
                 <span className="ix-idx">{ix.index}</span>
                 <span className="ix-name" title={ix.programId}>
-                  {ix.programLabel ?? shortenAddress(ix.programId, 5, 4)}
+                  {ix.programLabel ??
+                    aliases[ix.programId] ??
+                    shortenAddress(ix.programId, 5, 4)}
                 </span>
                 <span className="ix-sum">
                   <BindingColoredText
