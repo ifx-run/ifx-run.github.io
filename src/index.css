@@ -832,17 +832,21 @@ a.tx-signature-solscan:hover {
   padding-top: 0.55rem;
   border-top: 1px solid var(--line);
 }
-.frame-strip-label {
+.frame-strip-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.65rem;
+  min-width: 0;
+}
+.frame-strip-ord {
+  flex: 0 0 auto;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--muted);
 }
-.frame-strip-label code {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 0.78rem;
-  color: var(--text);
+.frame-strip-head .addr-display {
+  min-width: 0;
 }
 .frame-strip-vars {
   display: flex;

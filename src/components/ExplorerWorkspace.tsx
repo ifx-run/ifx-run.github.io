@@ -1095,8 +1095,13 @@ function InstructionList({
           <FrameStrips
             frames={frames}
             aliases={aliases}
+            cluster={
+              instructions.find((ix) => ix.ifxCluster)?.ifxCluster
+            }
             onRename={openRenameBinding}
             onClearName={clearBindingName}
+            onRenameAddress={openRenameAddress}
+            onClearAddress={(address) => clearAliasKey(address)}
             onJumpDef={(defIx) => {
               setExpanded((prev) => {
                 const next = new Set(prev)
@@ -1522,27 +1527,44 @@ function AddressDisplay({
 function FrameStrips({
   frames,
   aliases,
+  cluster,
   onRename,
   onClearName,
+  onRenameAddress,
+  onClearAddress,
   onJumpDef,
 }: {
   frames: FrameView[]
   aliases: Record<string, string>
+  cluster?: string
   onRename: (frame: string, index: number, defIx: number) => void
   onClearName: (frame: string, index: number) => void
+  onRenameAddress: (address: string) => void
+  onClearAddress: (address: string) => void
   onJumpDef: (defIx: number) => void
 }) {
   const { t } = useApp()
   const multi = frames.length > 1
   return (
     <div className="frame-strips">
-      {frames.map((frame) => (
+      {frames.map((frame, frameOrd) => (
         <div key={frame.address} className="frame-strip">
-          {multi && (
-            <div className="frame-strip-label" title={frame.address}>
-              <code>{shortenAddress(frame.address, 4, 4)}</code>
-            </div>
-          )}
+          <div className="frame-strip-head">
+            {multi ? (
+              <span className="frame-strip-ord muted">
+                {t.frameStrip} {frameOrd + 1}
+              </span>
+            ) : (
+              <span className="frame-strip-ord muted">{t.frameStrip}</span>
+            )}
+            <AddressDisplay
+              address={frame.address}
+              aliases={aliases}
+              cluster={cluster}
+              onRename={onRenameAddress}
+              onClear={onClearAddress}
+            />
+          </div>
           <div className="frame-strip-vars" role="list">
             {frame.vars.map((v) => {
               const key = aliasKey(frame.address, v.index)
