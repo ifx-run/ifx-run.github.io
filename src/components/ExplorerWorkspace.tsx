@@ -412,11 +412,13 @@ export function ExplorerWorkspace() {
         onSubmit={onSubmit}
       >
         <div className="ingress-head">
-          <label className="field-label" htmlFor={inputId}>
-            {t.inputLabel}
-          </label>
-          <div className="ingress-head-actions">
+          <div className="ingress-head-start">
+            <label className="field-label" htmlFor={inputId}>
+              {t.inputLabel}
+            </label>
             {wireBytes && <CopyBytesButtons bytes={wireBytes} />}
+          </div>
+          <div className="ingress-head-actions">
             <input
               ref={importFileRef}
               type="file"
@@ -526,7 +528,6 @@ export function ExplorerWorkspace() {
                     : t.sigRpcFetch
                   : t.load}
               </button>
-              {wireBytes && <CopyBytesButtons bytes={wireBytes} />}
               <span className="kbd-hint">⌘/Ctrl + Enter</span>
             </div>
             {!showAltRpc && !showSigRpc && (
