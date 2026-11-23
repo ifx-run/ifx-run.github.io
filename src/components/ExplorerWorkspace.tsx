@@ -15,6 +15,8 @@ import { useApp } from '../context/AppContext'
 import {
   explorerIngressFromLocationSearch,
   explorerIngressFromSearchParams,
+  searchParamsEqual,
+  withExplorerHash,
 } from '../lib/explorer-params'
 import {
   exploreFromWire,
@@ -110,6 +112,22 @@ export function ExplorerWorkspace() {
   const [aliasEpoch, setAliasEpoch] = useState(0)
   const [globalAliasOpen, setGlobalAliasOpen] = useState(false)
 
+  /** Keep ?hash= in lockstep with the decoded / requested transaction. */
+  const syncExplorerUrl = useCallback(
+    (signature: string | null) => {
+      const sig = signature?.trim() || null
+      bootstrappedUrlRef.current = sig ?? ''
+      setSearchParams(
+        (prev) => {
+          const next = withExplorerHash(prev, sig)
+          return searchParamsEqual(next, prev) ? prev : next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
   const applyResult = useCallback(
     (explored: ExploredTransaction, rawWire: string) => {
       setResult(explored)
@@ -120,8 +138,10 @@ export function ExplorerWorkspace() {
         rememberDecodedWire(wire)
         if (explored.signature) rememberSignatureWire(explored.signature, wire)
       }
+      // Prefer the wire signature so the address bar matches the shown tx.
+      syncExplorerUrl(explored.signature)
     },
-    [],
+    [syncExplorerUrl],
   )
 
   const clearResult = useCallback(() => {
@@ -241,10 +261,13 @@ export function ExplorerWorkspace() {
       const value = raw.trim()
       if (!value) {
         clearResult()
+        syncExplorerUrl(null)
         return
       }
 
       if (looksLikeSignature(value)) {
+        // Address bar tracks the requested hash even before wire arrives.
+        syncExplorerUrl(value)
         const cached = getCachedWireForSignature(value)
         if (cached) {
           applyWireFromSignature(value, cached)
@@ -270,6 +293,7 @@ export function ExplorerWorkspace() {
       fetchBySignature,
       loadWire,
       rpcDraft,
+      syncExplorerUrl,
     ],
   )
 
@@ -281,6 +305,7 @@ export function ExplorerWorkspace() {
       }
       if (!raw.trim()) {
         clearResult()
+        syncExplorerUrl(null)
         return
       }
       if (immediate) {
@@ -292,7 +317,7 @@ export function ExplorerWorkspace() {
         run(raw)
       }, AUTO_DECODE_MS)
     },
-    [clearResult, run],
+    [clearResult, run, syncExplorerUrl],
   )
 
   const searchKey = searchParams.toString()
@@ -347,6 +372,7 @@ export function ExplorerWorkspace() {
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (looksLikeSignature(input) && !hasCachedWireForSignature(input.trim())) {
+      syncExplorerUrl(input.trim())
       void fetchBySignature()
       return
     }
@@ -364,32 +390,7 @@ export function ExplorerWorkspace() {
     clearResult()
     setResolving(false)
     setFetchingSig(false)
-    // Drop deep-link params so refresh does not re-hydrate the same tx.
-    if (
-      searchParams.has('hash') ||
-      searchParams.has('sig') ||
-      searchParams.has('signature') ||
-      searchParams.has('tx') ||
-      searchParams.has('wire')
-    ) {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          for (const key of [
-            'hash',
-            'sig',
-            'signature',
-            'tx',
-            'wire',
-          ] as const) {
-            next.delete(key)
-          }
-          return next
-        },
-        { replace: true },
-      )
-      bootstrappedUrlRef.current = ''
-    }
+    syncExplorerUrl(null)
   }
 
   function onInputChange(value: string) {
