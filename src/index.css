@@ -631,6 +631,45 @@ textarea {
   color: var(--muted);
 }
 
+.sig-rpc-panel {
+  padding: 0.85rem 1rem 1rem;
+}
+.sig-rpc-panel h2 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+}
+
+.tx-signature-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  min-width: 0;
+}
+.tx-signature-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.tx-signature-value {
+  font-size: 0.82rem;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+a.tx-signature-solscan {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+a.tx-signature-solscan:hover {
+  text-decoration: none;
+  color: var(--text);
+  border-color: var(--muted);
+}
+
 .alt-rpc-panel {
   grid-column: 1 / -1;
 }

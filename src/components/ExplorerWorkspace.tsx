@@ -44,7 +44,14 @@ import {
   buildAnnotationPackage,
   parseAnnotationJson,
 } from '../lib/solana/annotation-share'
-import { solscanAccountUrl } from '../lib/solana/solscan'
+import { solscanAccountUrl, solscanTxUrl } from '../lib/solana/solscan'
+import { fetchWireBySignature } from '../lib/solana/fetch-tx'
+import { looksLikeSignature } from '../lib/solana/signature'
+import {
+  getCachedWireForSignature,
+  hasCachedWireForSignature,
+  rememberSignatureWire,
+} from '../lib/solana/signature-wire-cache'
 import { bindingColor } from '../lib/ifx/binding-color'
 import {
   buildBindingRefIndex,
@@ -64,6 +71,7 @@ export function ExplorerWorkspace() {
   const { t } = useApp()
   const inputId = useId()
   const rpcId = useId()
+  const sigRpcId = useId()
   const abortRef = useRef<AbortController | null>(null)
   const decodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ingressRef = useRef<HTMLFormElement | null>(null)
@@ -74,7 +82,9 @@ export function ExplorerWorkspace() {
   const [result, setResult] = useState<ExploredTransaction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
+  const [sigFetchError, setSigFetchError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(false)
+  const [fetchingSig, setFetchingSig] = useState(false)
   /** Collapses on successful decode; outside click also collapses when result exists. */
   const [ingressExpanded, setIngressExpanded] = useState(true)
   /** Bumps when aliases change without a wire-key change (e.g. import). */
@@ -84,8 +94,12 @@ export function ExplorerWorkspace() {
     (explored: ExploredTransaction, rawWire: string) => {
       setResult(explored)
       setIngressExpanded(false)
+      setSigFetchError(null)
       const wire = rawWire.trim()
-      if (wire) rememberDecodedWire(wire)
+      if (wire) {
+        rememberDecodedWire(wire)
+        if (explored.signature) rememberSignatureWire(explored.signature, wire)
+      }
     },
     [],
   )
@@ -94,8 +108,27 @@ export function ExplorerWorkspace() {
     setResult(null)
     setError(null)
     setRpcError(null)
+    setSigFetchError(null)
     setIngressExpanded(true)
   }, [])
+
+  const applyWireFromSignature = useCallback(
+    (sig: string, wire: string) => {
+      rememberSignatureWire(sig, wire)
+      setInput(wire)
+      setStoredWire(wire)
+      setError(null)
+      setSigFetchError(null)
+      try {
+        applyResult(exploreFromWire(wire), wire)
+      } catch (e) {
+        setResult(null)
+        if (e instanceof Error) setError(e.message)
+        else setError(t.errorGeneric)
+      }
+    },
+    [applyResult, t],
+  )
 
   const run = useCallback(
     (raw: string) => {
@@ -105,9 +138,24 @@ export function ExplorerWorkspace() {
         return
       }
 
+      if (looksLikeSignature(value)) {
+        const cached = getCachedWireForSignature(value)
+        if (cached) {
+          applyWireFromSignature(value, cached)
+          return
+        }
+        abortRef.current?.abort()
+        setResult(null)
+        setError(null)
+        setRpcError(null)
+        setIngressExpanded(true)
+        return
+      }
+
       abortRef.current?.abort()
       setError(null)
       setRpcError(null)
+      setSigFetchError(null)
 
       try {
         applyResult(exploreFromWire(value), value)
@@ -120,7 +168,7 @@ export function ExplorerWorkspace() {
         }
       }
     },
-    [applyResult, clearResult, t],
+    [applyResult, applyWireFromSignature, clearResult, t],
   )
 
   const scheduleRun = useCallback(
@@ -198,8 +246,43 @@ export function ExplorerWorkspace() {
     }
   }, [applyResult, input, rpcDraft, t])
 
+  const fetchBySignature = useCallback(async () => {
+    const sig = input.trim()
+    const rpc = rpcDraft.trim()
+    if (!looksLikeSignature(sig) || !rpc) return
+
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+
+    setStoredRpcUrl(rpc)
+    setFetchingSig(true)
+    setSigFetchError(null)
+    setError(null)
+
+    try {
+      const { signature, wireBase64 } = await fetchWireBySignature(
+        sig,
+        rpc,
+        ac.signal,
+      )
+      if (ac.signal.aborted) return
+      applyWireFromSignature(String(signature), wireBase64)
+    } catch (e) {
+      if (ac.signal.aborted) return
+      if (e instanceof Error) setSigFetchError(e.message)
+      else setSigFetchError(t.errorGeneric)
+    } finally {
+      if (!ac.signal.aborted) setFetchingSig(false)
+    }
+  }, [applyWireFromSignature, input, rpcDraft, t])
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
+    if (looksLikeSignature(input) && !hasCachedWireForSignature(input.trim())) {
+      void fetchBySignature()
+      return
+    }
     scheduleRun(input, true)
   }
 
@@ -213,6 +296,7 @@ export function ExplorerWorkspace() {
     setInput('')
     clearResult()
     setResolving(false)
+    setFetchingSig(false)
   }
 
   function onInputChange(value: string) {
@@ -263,15 +347,25 @@ export function ExplorerWorkspace() {
   }
 
   const showAltRpc = Boolean(result?.needsAltRpc)
-  const hasInput = Boolean(input.trim())
+  const wireTrimmed = input.trim()
+  const showSigRpc =
+    looksLikeSignature(wireTrimmed) &&
+    !hasCachedWireForSignature(wireTrimmed) &&
+    !result
+  const hasInput = Boolean(wireTrimmed)
   const canCollapseIngress = Boolean(result)
   const ingressCollapsed = canCollapseIngress && !ingressExpanded
-  const wireTrimmed = input.trim()
   const wirePreviewHead = wireTrimmed.slice(0, 14)
   const wirePreviewTail =
     wireTrimmed.length > 28 ? wireTrimmed.slice(-14) : ''
+  const displaySignature = result?.signature ?? null
+  const solscanCluster = /devnet/i.test(rpcDraft)
+    ? 'devnet'
+    : /testnet/i.test(rpcDraft)
+      ? 'testnet'
+      : undefined
   const wireBytes = useMemo(() => {
-    if (!result || !wireTrimmed) return null
+    if (!result || !wireTrimmed || looksLikeSignature(wireTrimmed)) return null
     try {
       return decodeWireInput(wireTrimmed).bytes
     } catch {
@@ -342,6 +436,12 @@ export function ExplorerWorkspace() {
             </button>
           </div>
         </div>
+        {displaySignature ? (
+          <SignatureRow
+            signature={displaySignature}
+            cluster={solscanCluster}
+          />
+        ) : null}
         {ingressCollapsed ? (
           <button
             type="button"
@@ -374,16 +474,65 @@ export function ExplorerWorkspace() {
               onKeyDown={onKeyDown}
             />
             <div className="ingress-actions">
-              <button type="submit" className="primary" disabled={!hasInput}>
-                {t.load}
+              <button
+                type="submit"
+                className="primary"
+                disabled={
+                  !hasInput ||
+                  fetchingSig ||
+                  (showSigRpc && !rpcDraft.trim())
+                }
+              >
+                {showSigRpc
+                  ? fetchingSig
+                    ? t.sigRpcLoading
+                    : t.sigRpcFetch
+                  : t.load}
               </button>
               {wireBytes && <CopyBytesButtons bytes={wireBytes} />}
               <span className="kbd-hint">⌘/Ctrl + Enter</span>
             </div>
-            {!showAltRpc && <p className="offline-note">{t.offlineNote}</p>}
+            {!showAltRpc && !showSigRpc && (
+              <p className="offline-note">{t.offlineNote}</p>
+            )}
           </>
         )}
       </form>
+
+      {showSigRpc && (
+        <section className="panel sig-rpc-panel" aria-live="polite">
+          <h2>{t.sigRpcTitle}</h2>
+          <p className="alt-rpc-why">{t.sigRpcWhy}</p>
+          <div className="alt-rpc-row">
+            <label htmlFor={sigRpcId}>{t.rpcLabel}</label>
+            <input
+              id={sigRpcId}
+              className="rpc-input"
+              value={rpcDraft}
+              onChange={(e) => {
+                setRpcDraft(e.target.value)
+                setStoredRpcUrl(e.target.value)
+              }}
+              spellCheck={false}
+              placeholder="https://…"
+              disabled={fetchingSig}
+            />
+            <button
+              type="button"
+              className="primary"
+              disabled={fetchingSig || !rpcDraft.trim()}
+              onClick={() => void fetchBySignature()}
+            >
+              {fetchingSig ? t.sigRpcLoading : t.sigRpcFetch}
+            </button>
+          </div>
+          {sigFetchError && (
+            <p className="alt-rpc-error" role="alert">
+              {sigFetchError}
+            </p>
+          )}
+        </section>
+      )}
 
       {error && (
         <div className="banner error" role="alert">
@@ -392,7 +541,7 @@ export function ExplorerWorkspace() {
         </div>
       )}
 
-      {!result && !error && <EmptyState />}
+      {!result && !error && !showSigRpc && <EmptyState />}
 
       {result && (
         <div className="result-grid">
@@ -408,7 +557,10 @@ export function ExplorerWorkspace() {
                   id={rpcId}
                   className="rpc-input"
                   value={rpcDraft}
-                  onChange={(e) => setRpcDraft(e.target.value)}
+                  onChange={(e) => {
+                    setRpcDraft(e.target.value)
+                    setStoredRpcUrl(e.target.value)
+                  }}
                   spellCheck={false}
                   placeholder="https://…"
                   disabled={resolving}
@@ -457,6 +609,61 @@ function EmptyState() {
       <h2>{t.emptyTitle}</h2>
       <p>{t.emptyBody}</p>
     </section>
+  )
+}
+
+function SignatureRow({
+  signature,
+  cluster,
+}: {
+  signature: string
+  cluster?: string
+}) {
+  const { t } = useApp()
+  const [copied, setCopied] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [])
+
+  async function copySig() {
+    try {
+      await navigator.clipboard.writeText(signature)
+      setCopied(true)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => setCopied(false), 1200)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div className="tx-signature-row">
+      <span className="tx-signature-label">{t.txSignature}</span>
+      <code className="tx-signature-value" title={signature}>
+        {shortenAddress(signature, 8, 8)}
+      </code>
+      <button
+        type="button"
+        className="ghost tiny"
+        title={t.txSignatureCopy}
+        onClick={() => void copySig()}
+      >
+        {copied ? t.addressCopied : t.addressCopy}
+      </button>
+      <a
+        className="ghost tiny tx-signature-solscan"
+        href={solscanTxUrl(signature, cluster)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={t.txSignatureOpenSolscan}
+      >
+        Solscan
+      </a>
+    </div>
   )
 }
 

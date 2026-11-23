@@ -29,6 +29,7 @@ import {
   fetchLoadedAddresses,
   type LoadedAddresses,
 } from './fetch-alts'
+import { signatureFromWireBytes } from './signature'
 import {
   identifyKnownInstruction,
   type KnownInstruction,
@@ -89,6 +90,8 @@ export type ExploredInstruction = {
 export type ExploredTransaction = {
   source: 'wire'
   encoding: WireEncoding
+  /** First wire signature (txid) when present. */
+  signature: string | null
   /** True when the tx references ALTs and accounts are not fully resolved yet. */
   needsAltRpc: boolean
   /** True after ALT accounts were fetched (or when there are no ALTs). */
@@ -389,6 +392,7 @@ function buildExplored(
   return {
     source: 'wire',
     encoding: decoded.encoding,
+    signature: signatureFromWireBytes(decoded.bytes),
     needsAltRpc: opts.needsAltRpc,
     altResolved: opts.altResolved,
     packet,
