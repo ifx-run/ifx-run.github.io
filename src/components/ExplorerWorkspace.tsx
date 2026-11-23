@@ -2129,93 +2129,101 @@ function InstructionBody({
 
   return (
     <div className="ix-body">
-      <dl className="ix-meta-dl">
-        <div>
-          <dt>{t.program}</dt>
-          <dd>
-            {ix.programLabel ? <strong>{ix.programLabel}</strong> : null}
-            <AddressDisplay
-              address={ix.programId}
-              aliases={aliases}
-              cluster={ix.ifxCluster}
-              onRename={(address) =>
-                onRenameAddress(address, { preferGlobal: true })
-              }
-              onClear={onClearAddress}
-            />
-          </dd>
+      <section className="ix-section">
+        <h3 className="ix-section-title">{t.program}</h3>
+        <div className="ix-section-lead">
+          {ix.programLabel ? (
+            <strong className="ix-program-label">{ix.programLabel}</strong>
+          ) : null}
+          <AddressDisplay
+            address={ix.programId}
+            aliases={aliases}
+            cluster={ix.ifxCluster}
+            onRename={(address) =>
+              onRenameAddress(address, { preferGlobal: true })
+            }
+            onClear={onClearAddress}
+          />
         </div>
-        {(ix.ixLabel || ix.ifxName) && (
-          <div>
-            <dt>{t.instruction}</dt>
-            <dd>
-              <code>{ix.ixLabel ?? ix.ifxName}</code>
-              {ix.discriminator !== undefined && (
-                <span className="muted"> · disc {ix.discriminator}</span>
-              )}
-            </dd>
-          </div>
+        {(ix.ixLabel || ix.ifxName || ix.ifxCluster) && (
+          <dl className="ix-meta-dl">
+            {(ix.ixLabel || ix.ifxName) && (
+              <div>
+                <dt>{t.instruction}</dt>
+                <dd>
+                  <code>{ix.ixLabel ?? ix.ifxName}</code>
+                  {ix.discriminator !== undefined && (
+                    <span className="muted"> · disc {ix.discriminator}</span>
+                  )}
+                </dd>
+              </div>
+            )}
+            {ix.ifxCluster && (
+              <div>
+                <dt>cluster</dt>
+                <dd>{ix.ifxCluster}</dd>
+              </div>
+            )}
+          </dl>
         )}
-        {ix.ifxCluster && (
-          <div>
-            <dt>cluster</dt>
-            <dd>{ix.ifxCluster}</dd>
-          </div>
-        )}
-      </dl>
-      <h3>{t.accounts}</h3>
-      <ul className="acct-list">
-        {ix.accounts.map((a, i) => {
-          const idxLabel = ix.isIfx
-            ? i === 0
-              ? t.accountFrame
-              : `#${i - 1}`
-            : `#${i}`
-          const idxTitle = ix.isIfx
-            ? i === 0
-              ? t.accountFrame
-              : t.accountRemainingHint
-            : t.accountIndex
-          return (
-            <li
-              key={`${a.address}-${i}`}
-              id={`ix-acct-${ix.index}-${i}`}
-              className={flashAccts.includes(i) ? 'is-flash' : undefined}
-            >
-              <span className="acct-idx" title={idxTitle}>
-                {idxLabel}
-              </span>
-              <span className="acct-flags" aria-label={roleAria(a.role, t)}>
-                <span
-                  className={
-                    a.role.signer ? 'flag flag-signer' : 'flag flag-off'
-                  }
-                >
-                  {t.accountRoleSigner}
+      </section>
+
+      <section className="ix-section">
+        <h3 className="ix-section-title">{t.accounts}</h3>
+        <ul className="acct-list">
+          {ix.accounts.map((a, i) => {
+            const idxLabel = ix.isIfx
+              ? i === 0
+                ? t.accountFrame
+                : `#${i - 1}`
+              : `#${i}`
+            const idxTitle = ix.isIfx
+              ? i === 0
+                ? t.accountFrame
+                : t.accountRemainingHint
+              : t.accountIndex
+            return (
+              <li
+                key={`${a.address}-${i}`}
+                id={`ix-acct-${ix.index}-${i}`}
+                className={flashAccts.includes(i) ? 'is-flash' : undefined}
+              >
+                <span className="acct-idx" title={idxTitle}>
+                  {idxLabel}
                 </span>
-                <span
-                  className={
-                    a.role.writable ? 'flag flag-writable' : 'flag flag-off'
-                  }
-                >
-                  {t.accountRoleWritable}
+                <span className="acct-flags" aria-label={roleAria(a.role, t)}>
+                  <span
+                    className={
+                      a.role.signer ? 'flag flag-signer' : 'flag flag-off'
+                    }
+                  >
+                    {t.accountRoleSigner}
+                  </span>
+                  <span
+                    className={
+                      a.role.writable ? 'flag flag-writable' : 'flag flag-off'
+                    }
+                  >
+                    {t.accountRoleWritable}
+                  </span>
                 </span>
-              </span>
-              <AddressDisplay
-                address={a.address}
-                aliases={aliases}
-                cluster={ix.ifxCluster}
-                onRename={onRenameAddress}
-                onClear={onClearAddress}
-              />
-            </li>
-          )
-        })}
-        {ix.accounts.length === 0 && <li className="muted">—</li>}
-      </ul>
+                <AddressDisplay
+                  address={a.address}
+                  aliases={aliases}
+                  cluster={ix.ifxCluster}
+                  onRename={onRenameAddress}
+                  onClear={onClearAddress}
+                />
+              </li>
+            )
+          })}
+          {ix.accounts.length === 0 && <li className="muted">—</li>}
+        </ul>
+      </section>
+
       {ix.l1 && (
-        <>
-          <h3>{t.argsL1}</h3>
+        <section className="ix-section">
+          <h3 className="ix-section-title">{t.argsL1}</h3>
           {ix.l1.missingFrameReset && (
             <p className="l1-warn" role="status">
               {t.missingFrameResetWarn}
@@ -2286,11 +2294,12 @@ function InstructionBody({
             <summary>{t.argsRaw}</summary>
             <pre>{JSON.stringify(ix.l1.args, jsonReplacer, 2)}</pre>
           </details>
-        </>
+        </section>
       )}
+
       {ix.known?.args && (
-        <>
-          <h3>{t.argsKnown}</h3>
+        <section className="ix-section">
+          <h3 className="ix-section-title">{t.argsKnown}</h3>
           <ul className="l1-lines">
             {Object.entries(ix.known.args).map(([k, v]) => (
               <li key={k}>
@@ -2300,32 +2309,38 @@ function InstructionBody({
               </li>
             ))}
           </ul>
-        </>
+        </section>
       )}
-      <h3>{t.data}</h3>
-      <div className="data-enc-row" role="group" aria-label={t.dataEncoding}>
-        {DATA_ENCODINGS.map((enc) => (
-          <button
-            key={enc}
-            type="button"
-            className={['enc-chip', dataEnc === enc ? 'is-active' : ''].join(
-              ' ',
-            )}
-            onClick={() => setDataEnc(enc)}
-          >
-            {enc}
-          </button>
-        ))}
-        <span className="muted data-enc-len">{ix.dataLen} B</span>
-        {ix.dataLen > 0 && <CopyBytesButtons bytes={ix.data} />}
-      </div>
-      <pre className="data-blob">
-        {ix.dataLen === 0 ? '—' : formatBytes(ix.data, dataEnc)}
-      </pre>
-      {ix.isIfx && !ix.l1 && <p className="muted">{t.payloadBytes}</p>}
-      <div className="detail-links">
-        {ix.docsSlug && <Link to={`/docs/${ix.docsSlug}`}>{t.docs}</Link>}
-      </div>
+
+      <section className="ix-section">
+        <h3 className="ix-section-title">{t.data}</h3>
+        <div className="data-enc-row" role="group" aria-label={t.dataEncoding}>
+          {DATA_ENCODINGS.map((enc) => (
+            <button
+              key={enc}
+              type="button"
+              className={['enc-chip', dataEnc === enc ? 'is-active' : ''].join(
+                ' ',
+              )}
+              onClick={() => setDataEnc(enc)}
+            >
+              {enc}
+            </button>
+          ))}
+          <span className="muted data-enc-len">{ix.dataLen} B</span>
+          {ix.dataLen > 0 && <CopyBytesButtons bytes={ix.data} />}
+        </div>
+        <pre className="data-blob">
+          {ix.dataLen === 0 ? '—' : formatBytes(ix.data, dataEnc)}
+        </pre>
+        {ix.isIfx && !ix.l1 && <p className="muted">{t.payloadBytes}</p>}
+      </section>
+
+      {ix.docsSlug && (
+        <div className="detail-links">
+          <Link to={`/docs/${ix.docsSlug}`}>{t.docs}</Link>
+        </div>
+      )}
     </div>
   )
 }

@@ -1119,11 +1119,42 @@ a.tx-signature-solscan:hover {
   white-space: nowrap;
 }
 .ix-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
   padding: 0.75rem 0.75rem 0.85rem 2.15rem;
   border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
-.ix-body h3:first-of-type {
-  margin-top: 0.55rem;
+.ix-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg) 65%, var(--bg-elev));
+}
+.ix-section-title {
+  margin: 0;
+  padding: 0 0 0.4rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1.2;
+}
+.ix-section-lead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ix-program-label {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text);
 }
 
 .decoder-note,
@@ -1479,21 +1510,28 @@ a.tx-signature-solscan:hover {
 .ix-meta-dl {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  margin: 0 0 0.85rem;
+  gap: 0.55rem;
+  margin: 0;
 }
 .ix-meta-dl > div {
   display: grid;
   grid-template-columns: 5.5rem 1fr;
   gap: 0.5rem;
   align-items: start;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.ix-meta-dl > div:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 .ix-meta-dl dt {
   margin: 0;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  padding-top: 0.15rem;
 }
 .ix-meta-dl dd {
   margin: 0;
@@ -1772,7 +1810,7 @@ a.tx-signature-solscan:hover {
 .detail-links {
   display: flex;
   gap: 1rem;
-  margin-top: 0.85rem;
+  padding: 0.15rem 0.25rem;
 }
 
 .docs-layout {
