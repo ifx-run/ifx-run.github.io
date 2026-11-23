@@ -14,6 +14,8 @@
   --paper: #f3eefc;
   --ifx: #a855f7;
   --ifx-bg: rgba(168, 85, 247, 0.14);
+  /* User address-book names (not Ifx purple, not known cyan). */
+  --alias: #e8a838;
   --danger: #e07070;
   --danger-bg: rgba(224, 112, 112, 0.12);
   --focus: #06b6d4;
@@ -1067,6 +1069,9 @@ a.tx-signature-solscan:hover {
 .timeline-item.is-other {
   opacity: 0.55;
 }
+.timeline-item.is-aliased {
+  opacity: 0.92;
+}
 .timeline-item.is-known {
   opacity: 0.9;
 }
@@ -1100,6 +1105,9 @@ a.tx-signature-solscan:hover {
 }
 .is-known .ix-name {
   color: var(--accent);
+}
+.is-aliased .ix-name {
+  color: var(--alias);
 }
 .is-other .ix-name {
   color: var(--muted);

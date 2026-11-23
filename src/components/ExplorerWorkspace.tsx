@@ -1276,7 +1276,13 @@ function InstructionList({
                 type="button"
                 className={[
                   'timeline-item',
-                  ix.isIfx ? 'is-ifx' : ix.programShort ? 'is-known' : 'is-other',
+                  ix.isIfx
+                    ? 'is-ifx'
+                    : ix.programShort
+                      ? 'is-known'
+                      : aliases[ix.programId]
+                        ? 'is-aliased'
+                        : 'is-other',
                   open ? 'is-expanded' : '',
                 ].join(' ')}
                 aria-expanded={open}
