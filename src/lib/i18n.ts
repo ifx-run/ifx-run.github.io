@@ -164,6 +164,11 @@ export const copy = {
     annotationExportTitle: 'Download wire + names as JSON',
     annotationImportTitle: 'Open a shared annotation JSON',
     annotationImportError: 'Could not import annotation file.',
+    exprHelpTitle: 'Expression operator',
+    exprHelpClose: 'Close',
+    exprHelpResult: 'Result',
+    exprHelpFootnote:
+      'Site glossary — periodically aligned with ifx-core Expr. Not a substitute for design docs.',
   },
   zh: {
     brand: 'Ifx',
@@ -306,6 +311,11 @@ export const copy = {
     annotationExportTitle: '下载交易数据与命名为 JSON',
     annotationImportTitle: '打开他人分享的注释 JSON',
     annotationImportError: '无法导入该注释文件。',
+    exprHelpTitle: '表达式算子',
+    exprHelpClose: '关闭',
+    exprHelpResult: '结果类型',
+    exprHelpFootnote:
+      '站内词条，会与 ifx-core Expr 定期对齐；详细设计仍以文档为准。',
   },
 } as const
 

@@ -82,6 +82,10 @@ import {
 } from '../lib/ifx/binding-refs'
 import { listRawCpiPatchMaps } from '../lib/ifx/decode-l1'
 import {
+  splitExprGlossaryTokens,
+  type ExprGlossaryEntry,
+} from '../lib/ifx/expr-glossary'
+import {
   aliasKey,
   bindingByteSizeAt,
   collectFrameViews,
@@ -1010,6 +1014,11 @@ type RefsModalState = {
   refs: BindingLoc[]
 }
 
+type ExprHelpState = {
+  token: string
+  entry: ExprGlossaryEntry
+}
+
 function InstructionList({
   instructions,
   wireKey,
@@ -1038,6 +1047,7 @@ function InstructionList({
   const [expanded, setExpanded] = useState(() => defaultExpanded(instructions))
   const [flashLine, setFlashLine] = useState<BindingDef | null>(null)
   const [refsModal, setRefsModal] = useState<RefsModalState | null>(null)
+  const [exprHelp, setExprHelp] = useState<ExprHelpState | null>(null)
   const [renameModal, setRenameModal] = useState<
     | { kind: 'binding'; frame: string; index: number; defIx: number }
     | {
@@ -1058,6 +1068,7 @@ function InstructionList({
     setExpanded(defaultExpanded(instructions))
     setFlashLine(null)
     setRefsModal(null)
+    setExprHelp(null)
     setRenameModal(null)
     setClearAllNamesOpen(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1082,13 +1093,16 @@ function InstructionList({
   }, [])
 
   useEffect(() => {
-    if (!refsModal) return
+    if (!refsModal && !exprHelp) return
     function onKey(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') setRefsModal(null)
+      if (e.key === 'Escape') {
+        setRefsModal(null)
+        setExprHelp(null)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [refsModal])
+  }, [refsModal, exprHelp])
 
   const toggle = useCallback((index: number) => {
     setExpanded((prev) => {
@@ -1359,6 +1373,7 @@ function InstructionList({
                   onFindRefs={onFindRefs}
                   onRenameAddress={openRenameAddress}
                   onClearAddress={clearAddressAliasBoth}
+                  onExprClick={(token, entry) => setExprHelp({ token, entry })}
                 />
               )}
             </li>
@@ -1381,6 +1396,13 @@ function InstructionList({
           }}
           onClose={() => setRefsModal(null)}
           onPick={focusLine}
+        />
+      )}
+      {exprHelp && (
+        <ExprHelpModal
+          token={exprHelp.token}
+          entry={exprHelp.entry}
+          onClose={() => setExprHelp(null)}
         />
       )}
       {renameModal?.kind === 'binding' && (
@@ -2119,6 +2141,60 @@ function FrameStrips({
   )
 }
 
+function ExprHelpModal({
+  token,
+  entry,
+  onClose,
+}: {
+  token: string
+  entry: ExprGlossaryEntry
+  onClose: () => void
+}) {
+  const { t, lang } = useApp()
+  const blurb = lang === 'zh' ? entry.zh : entry.en
+  return (
+    <div
+      className="refs-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="refs-modal expr-help-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expr-help-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="refs-modal-head">
+          <h3 id="expr-help-title">
+            {t.exprHelpTitle}{' '}
+            <code className="expr-help-token">{token}</code>
+          </h3>
+          <button type="button" className="ghost tiny" onClick={onClose}>
+            {t.exprHelpClose}
+          </button>
+        </div>
+        <div className="expr-help-body">
+          <p className="expr-help-sig">
+            <code>{entry.signature}</code>
+          </p>
+          <p className="expr-help-result muted">
+            {t.exprHelpResult}: <code>{entry.result}</code>
+            {entry.op !== token ? (
+              <>
+                {' '}
+                · <code>{entry.op}</code>
+              </>
+            ) : null}
+          </p>
+          <p className="expr-help-blurb">{blurb}</p>
+          <p className="expr-help-foot muted">{t.exprHelpFootnote}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RefsModal({
   bindingIndex,
   refs,
@@ -2194,6 +2270,7 @@ function InstructionBody({
   onFindRefs,
   onRenameAddress,
   onClearAddress,
+  onExprClick,
 }: {
   ix: ExploredInstruction
   instructions: ExploredInstruction[]
@@ -2213,6 +2290,7 @@ function InstructionBody({
     opts?: { preferGlobal?: boolean },
   ) => void
   onClearAddress: (address: string) => void
+  onExprClick: (token: string, entry: ExprGlossaryEntry) => void
 }) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
@@ -2428,6 +2506,7 @@ function InstructionBody({
                         )
                       }
                       onAddressRename={onRenameAddress}
+                      onExprClick={onExprClick}
                     />
                     {bindingIndex !== null && (
                       <button
@@ -2522,8 +2601,39 @@ function InstructionBody({
   )
 }
 
+function pushExprLinkedText(
+  text: string,
+  keyStart: number,
+  onExprClick: (token: string, entry: ExprGlossaryEntry) => void,
+): { nodes: ReactNode[]; nextKey: number } {
+  const nodes: ReactNode[] = []
+  let key = keyStart
+  for (const part of splitExprGlossaryTokens(text)) {
+    if (part.kind === 'text') {
+      if (part.text) nodes.push(<span key={key++}>{part.text}</span>)
+      continue
+    }
+    nodes.push(
+      <button
+        key={key++}
+        type="button"
+        className="expr-ref"
+        title={part.entry.signature}
+        onClick={(e) => {
+          e.stopPropagation()
+          onExprClick(part.token, part.entry)
+        }}
+      >
+        {part.token}
+      </button>,
+    )
+  }
+  return { nodes, nextKey: key }
+}
+
 /**
- * Turn `$3`, `#5`, `prog=#0`, `keys[1..+2]`, and legacy `accts[…]` into links.
+ * Turn `$3`, `#5`, `prog=#0`, `keys[1..+2]`, expr ops, and legacy `accts[…]`
+ * into links.
  */
 function L1LineWithLinks({
   line,
@@ -2536,6 +2646,7 @@ function L1LineWithLinks({
   onRenameBinding,
   onAddressClick,
   onAddressRename,
+  onExprClick,
 }: {
   line: string
   labelFor: (index: number) => string
@@ -2555,6 +2666,7 @@ function L1LineWithLinks({
   onRenameBinding?: (bindingIndex: number) => void
   onAddressClick: (address: string) => void
   onAddressRename: (address: string) => void
+  onExprClick: (token: string, entry: ExprGlossaryEntry) => void
 }) {
   const { t } = useApp()
   const nodes: ReactNode[] = []
@@ -2565,7 +2677,13 @@ function L1LineWithLinks({
   let key = 0
   while ((m = re.exec(line)) !== null) {
     if (m.index > last) {
-      nodes.push(<span key={key++}>{line.slice(last, m.index)}</span>)
+      const chunk = pushExprLinkedText(
+        line.slice(last, m.index),
+        key,
+        onExprClick,
+      )
+      nodes.push(...chunk.nodes)
+      key = chunk.nextKey
     }
     if (m[1] !== undefined) {
       const idx = Number(m[1])
@@ -2689,7 +2807,8 @@ function L1LineWithLinks({
     last = m.index + m[0].length
   }
   if (last < line.length) {
-    nodes.push(<span key={key++}>{line.slice(last)}</span>)
+    const chunk = pushExprLinkedText(line.slice(last), key, onExprClick)
+    nodes.push(...chunk.nodes)
   }
   return <code className="l1-line-code">{nodes}</code>
 }
