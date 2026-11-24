@@ -1959,28 +1959,40 @@ a.tx-signature-solscan:hover {
 .docs-nav a {
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.9rem;
-  padding: 0.2rem 0;
+  font-size: 0.86rem;
+  padding: 0.15rem 0 0.15rem 0.15rem;
+  line-height: 1.35;
 }
 .docs-nav a:hover,
 .docs-nav a.active {
   color: var(--accent);
 }
-.docs-nav-label,
-.docs-group-title {
-  margin: 0.85rem 0 0.35rem;
-  font-size: 0.68rem;
+/* Section headers must read larger than page links below them. */
+.docs-nav-label {
+  margin: 1rem 0 0.28rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
   font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--text);
+  line-height: 1.3;
 }
 .docs-nav-label:first-of-type {
-  margin-top: 0.55rem;
+  margin-top: 0.7rem;
 }
 .docs-group-title {
-  font-size: 0.85rem;
-  margin-top: 1.35rem;
+  margin: 1.75rem 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--text);
+  line-height: 1.25;
+}
+.docs-article > .docs-group-title:first-of-type {
+  margin-top: 1.1rem;
 }
 
 .docs-article {
