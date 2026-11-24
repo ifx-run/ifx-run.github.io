@@ -1492,10 +1492,11 @@ a.tx-signature-solscan:hover {
 }
 .raw-cpi-map {
   margin: 0.65rem 0 0.35rem;
-  padding: 0.55rem 0.65rem 0.45rem;
+  padding: 0.55rem 0.65rem 0.55rem;
   border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--bg) 70%, transparent);
+  overflow-x: auto;
 }
 .raw-cpi-map-head {
   display: flex;
@@ -1512,78 +1513,84 @@ a.tx-signature-solscan:hover {
 .raw-cpi-map-hint {
   font-size: 0.72rem;
 }
-.raw-cpi-bar {
+.raw-cpi-hexstrip-wrap {
+  max-width: 100%;
+}
+.raw-cpi-hexstrip {
   position: relative;
-  height: 1.85rem;
-  margin: 0.15rem 0 0.1rem;
+  display: grid;
+  grid-template-columns: repeat(16, 22px);
+  grid-auto-rows: 22px;
+  width: calc(16 * 22px);
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  border-radius: 4px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-elev) 80%, var(--bg));
+  box-sizing: content-box;
 }
-.raw-cpi-bar-track {
-  position: absolute;
-  inset: 40% 0 40%;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--line) 90%, var(--muted));
-}
-.raw-cpi-marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  margin: 0;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--accent, #3d7ea6) 55%, var(--line));
-  border-radius: 0.3rem;
-  background: color-mix(in srgb, var(--accent, #3d7ea6) 22%, var(--bg));
-  color: var(--text);
-  cursor: pointer;
-  transform: translateX(-2px);
-  min-width: 1.4rem;
+.raw-cpi-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border-right: 1px solid color-mix(in srgb, var(--line) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 35%, transparent);
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
 }
-.raw-cpi-marker:hover,
-.raw-cpi-marker:focus-visible {
-  background: color-mix(in srgb, var(--accent, #3d7ea6) 38%, var(--bg));
-  border-color: var(--accent, #3d7ea6);
-  outline: none;
-  z-index: 1;
-}
-.raw-cpi-marker-label {
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 0.68rem;
-  font-weight: 600;
+.raw-cpi-cell-hex {
+  font-family: var(--mono);
+  font-size: 0.58rem;
   line-height: 1;
+  letter-spacing: 0;
+  color: var(--muted);
+  opacity: 0.72;
+  user-select: none;
   pointer-events: none;
 }
-.raw-cpi-ticks {
-  position: relative;
-  height: 0.95rem;
-  margin-top: 0.1rem;
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 0.65rem;
-  color: var(--muted);
+.raw-cpi-cell.is-patched {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
 }
-.raw-cpi-tick {
+.raw-cpi-cell.is-patched .raw-cpi-cell-hex {
+  opacity: 0.18;
+}
+.raw-cpi-patch-hit {
   position: absolute;
-  transform: translateX(-50%);
-  white-space: nowrap;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, currentColor 45%, var(--line));
+  border-radius: 2px;
+  background: color-mix(in srgb, currentColor 22%, var(--bg));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
-.raw-cpi-tick:first-child {
-  transform: translateX(0);
+.raw-cpi-patch-hit:hover,
+.raw-cpi-patch-hit:focus-visible {
+  background: color-mix(in srgb, currentColor 36%, var(--bg));
+  border-color: currentColor;
+  outline: none;
+  z-index: 2;
 }
-.raw-cpi-tick:last-child {
-  transform: translateX(-100%);
+.raw-cpi-patch-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 4px var(--bg);
 }
 @media (max-width: 560px) {
   .raw-cpi-map-head {
     flex-direction: column;
     gap: 0.15rem;
-  }
-  .raw-cpi-bar {
-    height: 2.1rem;
-  }
-  .raw-cpi-marker-label {
-    font-size: 0.62rem;
   }
 }
 

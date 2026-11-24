@@ -1,5 +1,6 @@
 import type { DecodedLetBinding } from './decode-let'
 import { inferLetBindingTy } from './infer-binding-ty'
+import { valueTypeByteSize } from './value-type-size'
 
 export type FrameVar = {
   index: number
@@ -95,4 +96,46 @@ export function collectFrameViews(
 
 export function aliasKey(frame: string, index: number): string {
   return `${frame}:${index}`
+}
+
+type TyCursorIx = {
+  index: number
+  l1?: {
+    bindingBase?: number
+    args: {
+      kind: string
+      bindings?: DecodedLetBinding[]
+    }
+  }
+}
+
+/**
+ * Binding payload sizes as of `upToIx` (inclusive), after applying
+ * create/reset clears — used to size RawPatched hex highlights.
+ */
+export function bindingByteSizeAt(
+  instructions: readonly TyCursorIx[],
+  upToIx: number,
+  bindingIndex: number,
+): number {
+  const env = new Map<number, string>()
+  for (const ix of instructions) {
+    if (ix.index > upToIx) break
+    const kind = ix.l1?.args.kind
+    if (kind === 'create_frame' || kind === 'reset_frame') {
+      env.clear()
+      continue
+    }
+    if (kind !== 'let') continue
+    const bindings = ix.l1?.args.bindings
+    if (!bindings) continue
+    const base = ix.l1?.bindingBase ?? 0
+    for (let i = 0; i < bindings.length; i++) {
+      const b = bindings[i]!
+      const index = base + i
+      const ty = inferLetBindingTy(b, env)
+      env.set(index, ty)
+    }
+  }
+  return valueTypeByteSize(env.get(bindingIndex) ?? 'u64')
 }

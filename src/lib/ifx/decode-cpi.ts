@@ -28,6 +28,8 @@ export type DecodedCpi =
       accountsStart: number
       accountsLen: number
       dataLen: number
+      /** Template instruction data (bytes that patches overwrite at runtime). */
+      template: Uint8Array
       patches: DecodedRawPatch[]
     }
   | {
@@ -267,12 +269,13 @@ export function decodeCpi(c: WireCursor): DecodedCpi {
   }
   if (kindTag === CPI_WIRE.rawPatched) {
     const dataLen = c.u16()
-    c.take(dataLen)
+    const template = c.take(dataLen)
     return {
       kind: 'rawPatched',
       accountsStart,
       accountsLen,
       dataLen,
+      template,
       patches: decodePatchList(c),
     }
   }

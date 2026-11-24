@@ -79,6 +79,7 @@ import {
 import { listRawCpiPatchMaps } from '../lib/ifx/decode-l1'
 import {
   aliasKey,
+  bindingByteSizeAt,
   collectFrameViews,
   type FrameView,
 } from '../lib/ifx/frame-bindings'
@@ -1329,6 +1330,7 @@ function InstructionList({
               {open && (
                 <InstructionBody
                   ix={ix}
+                  instructions={instructions}
                   flashLine={
                     flashLine?.ixIndex === ix.index ? flashLine.lineIndex : null
                   }
@@ -2076,6 +2078,7 @@ function RefsModal({
 
 function InstructionBody({
   ix,
+  instructions,
   flashLine,
   refIndex,
   aliases,
@@ -2087,6 +2090,7 @@ function InstructionBody({
   onClearAddress,
 }: {
   ix: ExploredInstruction
+  instructions: ExploredInstruction[]
   flashLine: number | null
   refIndex: Map<string, BindingLoc[]>
   aliases: Record<string, string>
@@ -2352,6 +2356,9 @@ function InstructionBody({
               key={`${map.label ?? 'raw'}-${map.dataLen}-${i}`}
               map={map}
               onValueClick={onValueClick}
+              bindingByteSize={(n) =>
+                bindingByteSizeAt(instructions, ix.index, n)
+              }
             />
           ))}
           <details className="l1-raw">

@@ -34,9 +34,9 @@ export const copy = {
     docsGroupQuickStart: 'Quick Start',
     docsGroupReference: 'Reference',
     docsSiteFootnote: 'Guide hosted on ifx.run — examples link to GitHub.',
-    rawCpiPatchMap: 'Template data patch map',
+    rawCpiPatchMap: 'Template data',
     rawCpiPatchMapHint: (len: number) =>
-      `Length ${len} B — markers show rawCpiPatch offsets (not a hex dump).`,
+      `${len} B · patched slots show $N over template bytes`,
     tagline:
       'On-chain Solana orchestration — explore Ifx instructions offline from wire bytes.',
     inputLabel: 'Transaction wire',
@@ -178,9 +178,9 @@ export const copy = {
     docsGroupQuickStart: '快速开始',
     docsGroupReference: '参考文档',
     docsSiteFootnote: '本站托管的上手指南 — 完整示例指向 GitHub。',
-    rawCpiPatchMap: '模板 data 的 patch 图',
+    rawCpiPatchMap: '模板 data',
     rawCpiPatchMapHint: (len: number) =>
-      `长度 ${len} B — 标记为 rawCpiPatch 偏移（不是 hex dump）。`,
+      `${len} B · 被 patch 的槽用 $N 盖住模板字节`,
     tagline: 'Solana 链上编排 — 离线解析交易数据中的 Ifx 指令。',
     inputLabel: '交易数据',
     inputPlaceholder:

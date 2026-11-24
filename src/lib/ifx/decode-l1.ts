@@ -49,11 +49,12 @@ export type IfxL1View = {
   missingFrameReset?: boolean
 }
 
-/** Structured RawPatched CPI map for explorer visualization (not hex). */
+/** Structured RawPatched CPI map for explorer hex-strip visualization. */
 export type RawCpiPatchMapView = {
   /** Optional arm/step label when nested under if_else. */
   label?: string
   dataLen: number
+  template: Uint8Array
   patches: DecodedRawPatch[]
 }
 
@@ -65,6 +66,7 @@ export function listRawCpiPatchMaps(args: IfxL1Decoded): RawCpiPatchMapView[] {
     out.push({
       label,
       dataLen: cpi.dataLen,
+      template: cpi.template,
       patches: cpi.patches,
     })
   }
