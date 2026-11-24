@@ -25,9 +25,18 @@ export const copy = {
     homeHeadline:
       'Read, branch, and CPI inside one transaction — without a new wrapper program each time.',
     homeSupport:
-      'Paste transaction wire (hex / base58 / base64) and decode Ifx + SIMD-0385 v1 offline. No RPC. Read the design when you build.',
+      'Build with the TypeScript, Go, or Rust SDK — then paste wire into the explorer to verify Ifx + SIMD-0385 v1 offline.',
     ctaExplorer: 'Open Explorer',
-    ctaDocs: 'Read the docs',
+    ctaQuickStart: 'Quick Start',
+    ctaDocs: 'Full docs',
+    docsIndexLead:
+      'Start with a minimal SDK demo, then dig into design docs synced from the program repo.',
+    docsGroupQuickStart: 'Quick Start',
+    docsGroupReference: 'Reference',
+    docsSiteFootnote: 'Guide hosted on ifx.run — examples link to GitHub.',
+    rawCpiPatchMap: 'Template data patch map',
+    rawCpiPatchMapHint: (len: number) =>
+      `Length ${len} B — markers show rawCpiPatch offsets (not a hex dump).`,
     tagline:
       'On-chain Solana orchestration — explore Ifx instructions offline from wire bytes.',
     inputLabel: 'Transaction wire',
@@ -159,9 +168,18 @@ export const copy = {
     homeHeadline:
       '同一笔交易里读状态、分支、CPI——不必为每种胶水逻辑再部署一个 wrapper program。',
     homeSupport:
-      '粘贴交易序列化数据（hex / base58 / base64），离线解码 Ifx 与 SIMD-0385 v1。默认不访问 RPC。动手前先读设计文档。',
+      '用 TypeScript / Go / Rust SDK 上手，再到浏览器粘贴 wire，离线校验 Ifx 与 SIMD-0385 v1。',
     ctaExplorer: '打开浏览器',
-    ctaDocs: '阅读文档',
+    ctaQuickStart: '快速开始',
+    ctaDocs: '完整文档',
+    docsIndexLead:
+      '先用 SDK 跑通最小 demo，再查阅从程序仓同步的设计文档。',
+    docsGroupQuickStart: '快速开始',
+    docsGroupReference: '参考文档',
+    docsSiteFootnote: '本站托管的上手指南 — 完整示例指向 GitHub。',
+    rawCpiPatchMap: '模板 data 的 patch 图',
+    rawCpiPatchMapHint: (len: number) =>
+      `长度 ${len} B — 标记为 rawCpiPatch 偏移（不是 hex dump）。`,
     tagline: 'Solana 链上编排 — 离线解析交易数据中的 Ifx 指令。',
     inputLabel: '交易数据',
     inputPlaceholder:

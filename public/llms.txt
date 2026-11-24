@@ -8,8 +8,15 @@ Ifx (program) and ifx.run (this site) are distinct: the explorer is read-only de
 
 - [Home](https://ifx.run/): Product overview
 - [Explorer](https://ifx.run/explorer): Paste wire (hex / base58 / base64) or a signature; decode Ifx + known Solana programs offline (RPC only for signatures / ALTs)
-- [Docs (EN)](https://ifx.run/docs): Design and implementation
+- [Quick Start](https://ifx.run/docs/quick-start): Minimal SDK demos (TS / Go / Rust) and explorer verify loop
+- [Docs (EN)](https://ifx.run/docs): Guides + design and implementation
 - [Docs (ZH)](https://ifx.run/zh/docs): 中文文档
+
+## Quick Start (English)
+
+- [Quick Start](https://ifx.run/docs/quick-start)
+- [Two-hop swap](https://ifx.run/docs/quick-start/two-hop-swap)
+- [AI skill](https://ifx.run/docs/quick-start/ai-skill)
 
 ## Docs (English)
 
@@ -24,6 +31,12 @@ Ifx (program) and ifx.run (this site) are distinct: the explorer is read-only de
 - [Errors](https://ifx.run/docs/errors)
 - [Debugging](https://ifx.run/docs/debugging)
 - [Typed let bindings](https://ifx.run/docs/typed-let-bindings)
+
+## Quick Start (Chinese)
+
+- [快速开始](https://ifx.run/zh/docs/quick-start)
+- [两跳 Swap](https://ifx.run/zh/docs/quick-start/two-hop-swap)
+- [AI Skill](https://ifx.run/zh/docs/quick-start/ai-skill)
 
 ## Docs (Chinese)
 

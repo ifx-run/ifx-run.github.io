@@ -18,6 +18,19 @@ import rehypeStringify from 'rehype-stringify'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dist = join(root, 'dist')
 const docsDir = join(root, 'content', 'docs')
+const siteDocsDir = join(root, 'content', 'site-docs')
+
+/** Site guides: dotted file stem → URL slug (may contain `/`). */
+const SITE_FILE_TO_SLUG = {
+  'quick-start': 'quick-start',
+  'quick-start.two-hop-swap': 'quick-start/two-hop-swap',
+  'quick-start.ai-skill': 'quick-start/ai-skill',
+}
+const SITE_SLUG_ORDER = [
+  'quick-start',
+  'quick-start/two-hop-swap',
+  'quick-start/ai-skill',
+]
 
 const seo = JSON.parse(await readFile(join(root, 'seo.config.json'), 'utf8'))
 const docsMeta = JSON.parse(
@@ -130,7 +143,34 @@ async function renderMarkdown(md) {
   return String(file)
 }
 
-async function listDocSlugs() {
+function siteFileStemForSlug(slug) {
+  for (const [stem, s] of Object.entries(SITE_FILE_TO_SLUG)) {
+    if (s === slug) return stem
+  }
+  return null
+}
+
+async function listSiteDocSlugs() {
+  try {
+    const names = await readdir(siteDocsDir)
+    const present = new Set()
+    for (const n of names) {
+      const base = n.endsWith('.zh-CN.md')
+        ? n.replace(/\.zh-CN\.md$/i, '')
+        : n.endsWith('.md')
+          ? n.replace(/\.md$/i, '')
+          : null
+      if (!base) continue
+      const slug = SITE_FILE_TO_SLUG[base]
+      if (slug) present.add(slug)
+    }
+    return SITE_SLUG_ORDER.filter((s) => present.has(s))
+  } catch {
+    return []
+  }
+}
+
+async function listSyncedDocSlugs() {
   const fromMeta = (docsMeta.files ?? [])
     .filter((f) => f.endsWith('.md') && !f.includes('.zh-CN.'))
     .map((f) => f.replace(/\.md$/i, ''))
@@ -142,11 +182,32 @@ async function listDocSlugs() {
     .sort()
 }
 
+async function listDocSlugs() {
+  const site = await listSiteDocSlugs()
+  const synced = await listSyncedDocSlugs()
+  return [...site, ...synced]
+}
+
 async function readDocMarkdown(slug, lang = 'en') {
-  const primary =
-    lang === 'zh' ? `${slug}.zh-CN.md` : `${slug}.md`
-  const fallback =
-    lang === 'zh' ? `${slug}.md` : `${slug}.zh-CN.md`
+  const siteStem = siteFileStemForSlug(slug)
+  if (siteStem) {
+    const primary =
+      lang === 'zh' ? `${siteStem}.zh-CN.md` : `${siteStem}.md`
+    const fallback =
+      lang === 'zh' ? `${siteStem}.md` : `${siteStem}.zh-CN.md`
+    try {
+      return await readFile(join(siteDocsDir, primary), 'utf8')
+    } catch {
+      try {
+        return await readFile(join(siteDocsDir, fallback), 'utf8')
+      } catch {
+        return ''
+      }
+    }
+  }
+
+  const primary = lang === 'zh' ? `${slug}.zh-CN.md` : `${slug}.md`
+  const fallback = lang === 'zh' ? `${slug}.md` : `${slug}.zh-CN.md`
   try {
     return await readFile(join(docsDir, primary), 'utf8')
   } catch {

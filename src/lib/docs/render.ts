@@ -51,9 +51,16 @@ export function rewriteDocLinks(md: string): string {
         .split('/')
         .pop()!
       if (/^readme$/i.test(base)) base = 'readme'
+      // Site guides: quick-start.two-hop-swap.md → slug quick-start/two-hop-swap
+      const nested = base.includes('.') ? base.replace(/\./g, '/') : base
+      const slug = SLUGS.has(base)
+        ? base
+        : SLUGS.has(nested)
+          ? nested
+          : null
 
-      if (SLUGS.has(base)) {
-        const path = isZh ? `/zh/docs/${base}` : `/docs/${base}`
+      if (slug) {
+        const path = isZh ? `/zh/docs/${slug}` : `/docs/${slug}`
         return `[${label}](${path}${hash ? `#${hash}` : ''})`
       }
       const blob = file.startsWith('docs/')

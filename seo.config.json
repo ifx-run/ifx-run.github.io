@@ -8,7 +8,7 @@
   "pages": {
     "home": {
       "title": "Ifx — Solana on-chain orchestration",
-      "description": "On-chain Solana orchestration without a new wrapper program each time. Explore Ifx transactions offline and read the design docs."
+      "description": "On-chain Solana orchestration without a new wrapper program each time. Explore Ifx transactions offline, follow Quick Start, and read the design docs."
     },
     "explorer": {
       "title": "Explorer — Ifx transaction wire decoder",
@@ -16,10 +16,16 @@
     },
     "docs": {
       "title": "Docs — Ifx design & implementation",
-      "description": "Design, glossary, Frame authority, CPI patches, typed let bindings, and debugging notes for the Ifx Solana program."
+      "description": "Quick Start guides plus design, glossary, Frame authority, CPI patches, typed let bindings, and debugging notes for the Ifx Solana program."
     }
   },
   "docTitles": {
+    "quick-start": { "en": "Quick Start", "zh": "快速开始" },
+    "quick-start/two-hop-swap": {
+      "en": "Two-hop swap",
+      "zh": "两跳 Swap"
+    },
+    "quick-start/ai-skill": { "en": "AI skill", "zh": "AI Skill" },
     "readme": { "en": "README", "zh": "README" },
     "design": { "en": "Design", "zh": "设计" },
     "glossary": { "en": "Glossary", "zh": "术语表" },

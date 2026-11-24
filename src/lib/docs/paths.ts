@@ -5,8 +5,14 @@ export function docsIndexPath(lang: Lang): string {
   return lang === 'zh' ? '/zh/docs' : '/docs'
 }
 
+/** Slug may be nested, e.g. `quick-start/two-hop-swap`. */
 export function docsArticlePath(slug: string, lang: Lang): string {
-  return lang === 'zh' ? `/zh/docs/${slug}` : `/docs/${slug}`
+  const path = slug
+    .split('/')
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join('/')
+  return lang === 'zh' ? `/zh/docs/${path}` : `/docs/${path}`
 }
 
 /** Lang implied by a docs pathname, or null if not a docs URL. */
@@ -17,11 +23,19 @@ export function langFromDocsPathname(pathname: string): Lang | null {
   return null
 }
 
-/** Article slug from `/docs/:slug` or `/zh/docs/:slug`. */
+/** Article slug from `/docs/…` or `/zh/docs/…` (may include `/`). */
 export function docsSlugFromPathname(pathname: string): string | null {
   const path = pathname.replace(/\/+$/, '') || '/'
-  const m = /^\/(?:zh\/)?docs\/([^/]+)$/.exec(path)
-  return m?.[1] ?? null
+  const m = /^\/(?:zh\/)?docs\/(.+)$/.exec(path)
+  if (!m?.[1]) return null
+  try {
+    return m[1]
+      .split('/')
+      .map((p) => decodeURIComponent(p))
+      .join('/')
+  } catch {
+    return m[1]
+  }
 }
 
 /** Swap EN ↔ ZH docs path; non-docs paths unchanged. */

@@ -9,8 +9,9 @@ import {
 } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import {
-  DOC_ENTRIES,
   DOCS_META,
+  SITE_DOC_ENTRIES,
+  SYNCED_DOC_ENTRIES,
   docMarkdown,
   docTitle,
   getDoc,
@@ -18,6 +19,7 @@ import {
 import {
   docsArticlePath,
   docsIndexPath,
+  docsSlugFromPathname,
   langFromDocsPathname,
 } from '../lib/docs/paths'
 import { renderMarkdown } from '../lib/docs/render'
@@ -28,6 +30,12 @@ export function parseLangParam(raw: string | null): Lang | null {
   return null
 }
 
+function useDocSlugFromRoute(): string | undefined {
+  const { slug, topic } = useParams()
+  if (!slug) return undefined
+  return topic ? `${slug}/${topic}` : slug
+}
+
 /** Route path is the source of truth for docs language. */
 function useLangFromDocsPath() {
   const { lang, setLang } = useApp()
@@ -36,7 +44,6 @@ function useLangFromDocsPath() {
   useEffect(() => {
     const fromPath = langFromDocsPathname(pathname)
     if (fromPath && fromPath !== lang) setLang(fromPath)
-    // Only react to path; avoid fighting in-doc navigations with `lang` in deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [pathname, setLang])
 }
@@ -46,14 +53,16 @@ function useRedirectLegacyLangQuery() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { slug } = useParams()
+  const docSlug = useDocSlugFromRoute()
 
   useEffect(() => {
     const q = parseLangParam(params.get('lang'))
     if (!q) return
-    const target = slug ? docsArticlePath(slug, q) : docsIndexPath(q)
+    const target = docSlug
+      ? docsArticlePath(docSlug, q)
+      : docsIndexPath(q)
     navigate(target, { replace: true })
-  }, [navigate, params, pathname, slug])
+  }, [docSlug, navigate, params, pathname])
 }
 
 export function DocsIndexPage() {
@@ -68,6 +77,18 @@ export function DocsIndexPage() {
       </aside>
       <article className="docs-article">
         <h1>{t.navDocs}</h1>
+        <p className="muted">{t.docsIndexLead}</p>
+
+        <h2 className="docs-group-title">{t.docsGroupQuickStart}</h2>
+        <ul className="docs-index-list">
+          {SITE_DOC_ENTRIES.map((d) => (
+            <li key={d.slug}>
+              <Link to={docsArticlePath(d.slug, lang)}>{docTitle(d, lang)}</Link>
+            </li>
+          ))}
+        </ul>
+
+        <h2 className="docs-group-title">{t.docsGroupReference}</h2>
         <p className="muted">
           Source:{' '}
           <a href={DOCS_META.githubTreeUrl} target="_blank" rel="noreferrer">
@@ -76,7 +97,7 @@ export function DocsIndexPage() {
           — not rewritten here.
         </p>
         <ul className="docs-index-list">
-          {DOC_ENTRIES.map((d) => (
+          {SYNCED_DOC_ENTRIES.map((d) => (
             <li key={d.slug}>
               <Link to={docsArticlePath(d.slug, lang)}>{docTitle(d, lang)}</Link>
             </li>
@@ -89,10 +110,10 @@ export function DocsIndexPage() {
 }
 
 export function DocsArticlePage() {
-  const { slug } = useParams()
+  const docSlug = useDocSlugFromRoute()
   const { t, lang, setLang } = useApp()
   const navigate = useNavigate()
-  const entry = slug ? getDoc(slug) : undefined
+  const entry = docSlug ? getDoc(docSlug) : undefined
   const [html, setHtml] = useState<string>('')
   const [err, setErr] = useState<string | null>(null)
 
@@ -127,11 +148,9 @@ export function DocsArticlePage() {
         const url = new URL(href, window.location.origin)
         const pathLang = langFromDocsPathname(url.pathname)
         if (pathLang) setLang(pathLang)
-        // Legacy in-content ?lang= links
         const qLang = parseLangParam(url.searchParams.get('lang'))
         if (qLang) {
-          const s = url.pathname.replace(/^\/(?:zh\/)?docs\/?/, '') || null
-          const articleSlug = s && !s.includes('/') ? s : null
+          const articleSlug = docsSlugFromPathname(url.pathname)
           navigate(
             articleSlug
               ? docsArticlePath(articleSlug, qLang)
@@ -147,12 +166,16 @@ export function DocsArticlePage() {
     }
   }
 
-  if (!slug || !entry) return <Navigate to={docsIndexPath(lang)} replace />
+  if (!docSlug || !entry) return <Navigate to={docsIndexPath(lang)} replace />
+
+  const githubHref = entry.site
+    ? undefined
+    : `https://github.com/${DOCS_META.repo}/blob/${DOCS_META.sha}/docs/${docSlug}${lang === 'zh' ? '.zh-CN' : ''}.md`
 
   return (
     <div className="docs-layout">
       <aside className="docs-nav">
-        <DocsNav active={slug} />
+        <DocsNav active={docSlug} />
       </aside>
       <article className="docs-article">
         {err && <p className="banner error">{err}</p>}
@@ -162,14 +185,16 @@ export function DocsArticlePage() {
           dangerouslySetInnerHTML={{ __html: html }}
         />
         <p className="docs-footnote">
-          {t.docsFootnote(DOCS_META.sha)} ·{' '}
-          <a
-            href={`https://github.com/${DOCS_META.repo}/blob/${DOCS_META.sha}/docs/${slug}${lang === 'zh' ? '.zh-CN' : ''}.md`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub
-          </a>
+          {entry.site ? t.docsSiteFootnote : t.docsFootnote(DOCS_META.sha)}
+          {githubHref ? (
+            <>
+              {' '}
+              ·{' '}
+              <a href={githubHref} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+            </>
+          ) : null}
         </p>
       </article>
     </div>
@@ -177,7 +202,7 @@ export function DocsArticlePage() {
 }
 
 function DocsNav({ active }: { active?: string }) {
-  const { lang } = useApp()
+  const { t, lang } = useApp()
   return (
     <nav aria-label="Docs">
       <Link
@@ -186,7 +211,18 @@ function DocsNav({ active }: { active?: string }) {
       >
         Index
       </Link>
-      {DOC_ENTRIES.map((d) => (
+      <p className="docs-nav-label">{t.docsGroupQuickStart}</p>
+      {SITE_DOC_ENTRIES.map((d) => (
+        <Link
+          key={d.slug}
+          to={docsArticlePath(d.slug, lang)}
+          className={active === d.slug ? 'active' : undefined}
+        >
+          {docTitle(d, lang)}
+        </Link>
+      ))}
+      <p className="docs-nav-label">{t.docsGroupReference}</p>
+      {SYNCED_DOC_ENTRIES.map((d) => (
         <Link
           key={d.slug}
           to={docsArticlePath(d.slug, lang)}

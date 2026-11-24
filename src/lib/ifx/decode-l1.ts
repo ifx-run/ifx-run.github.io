@@ -6,6 +6,7 @@ import {
   decodeIfElseArgs,
   type DecodedCpi,
   type DecodedIfElseArm,
+  type DecodedRawPatch,
 } from './decode-cpi'
 import {
   decodeIfxInstruction,
@@ -46,6 +47,41 @@ export type IfxL1View = {
    * in the same transaction — explorer assumes `$0` but flags the risk.
    */
   missingFrameReset?: boolean
+}
+
+/** Structured RawPatched CPI map for explorer visualization (not hex). */
+export type RawCpiPatchMapView = {
+  /** Optional arm/step label when nested under if_else. */
+  label?: string
+  dataLen: number
+  patches: DecodedRawPatch[]
+}
+
+/** Walk L1 args and collect every RawPatched CPI for the byte-bar UI. */
+export function listRawCpiPatchMaps(args: IfxL1Decoded): RawCpiPatchMapView[] {
+  const out: RawCpiPatchMapView[] = []
+  function push(cpi: DecodedCpi, label?: string) {
+    if (cpi.kind !== 'rawPatched') return
+    out.push({
+      label,
+      dataLen: cpi.dataLen,
+      patches: cpi.patches,
+    })
+  }
+  if (args.kind === 'patched_cpi') {
+    push(args.cpi)
+    return out
+  }
+  if (args.kind === 'if_else') {
+    for (const [armLabel, arm] of [
+      ['then', args.thenArm],
+      ['else', args.elseArm],
+    ] as const) {
+      if (arm.kind !== 'cpi') continue
+      arm.steps.forEach((step, i) => push(step, `${armLabel}[${i}]`))
+    }
+  }
+  return out
 }
 
 function shortPk(bytes: Uint8Array): string {

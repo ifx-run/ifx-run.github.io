@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { docsIndexPath } from '../lib/docs/paths'
+import { docsArticlePath, docsIndexPath } from '../lib/docs/paths'
 
 export function HomePage() {
   const { t, lang } = useApp()
@@ -36,14 +36,19 @@ export function HomePage() {
             <Link to="/explorer" className="cta cta-primary">
               {t.ctaExplorer}
             </Link>
-            <Link to={docsIndexPath(lang)} className="cta cta-secondary">
-              {t.ctaDocs}
+            <Link
+              to={docsArticlePath('quick-start', lang)}
+              className="cta cta-secondary"
+            >
+              {t.ctaQuickStart}
               <span className="cta-arrow" aria-hidden="true">
                 →
               </span>
             </Link>
           </div>
           <p className="home-foot">
+            <Link to={docsIndexPath(lang)}>{t.ctaDocs}</Link>
+            <span className="home-foot-sep" aria-hidden="true" />
             <a
               href="https://github.com/ifx-run/ifx"
               target="_blank"

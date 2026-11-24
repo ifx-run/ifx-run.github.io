@@ -69,12 +69,14 @@ import {
   hasCachedWireForSignature,
   rememberSignatureWire,
 } from '../lib/solana/signature-wire-cache'
+import { RawCpiByteBar } from './RawCpiByteBar'
 import { bindingColor } from '../lib/ifx/binding-color'
 import {
   buildBindingRefIndex,
   refsForDef,
   type BindingLoc,
 } from '../lib/ifx/binding-refs'
+import { listRawCpiPatchMaps } from '../lib/ifx/decode-l1'
 import {
   aliasKey,
   collectFrameViews,
@@ -2310,6 +2312,13 @@ function InstructionBody({
               )
             })}
           </ul>
+          {listRawCpiPatchMaps(ix.l1.args).map((map, i) => (
+            <RawCpiByteBar
+              key={`${map.label ?? 'raw'}-${map.dataLen}-${i}`}
+              map={map}
+              onValueClick={onValueClick}
+            />
+          ))}
           <details className="l1-raw">
             <summary>{t.argsRaw}</summary>
             <pre>{JSON.stringify(ix.l1.args, jsonReplacer, 2)}</pre>
