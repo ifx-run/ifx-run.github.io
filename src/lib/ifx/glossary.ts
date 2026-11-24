@@ -116,6 +116,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
       en: 'Arithmetic negation.',
       zh: '算术取负。',
     },
+    usage: {
+      en: 'Checked on integers: overflow (e.g. min i8) aborts the tx — not wrapping.',
+      zh: '整数为 Checked：溢出（如 i8 最小值取负）整笔失败，不会 wrapping。',
+    },
     example: 'neg($0)',
   }),
   isZero: E({
@@ -234,6 +238,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     display: '+',
     signature: 'add(a: T, b: T) → T',
     summary: { en: 'a + b (same arithmetic type).', zh: 'a + b（同类型）。' },
+    usage: {
+      en: 'Checked on integers: overflow aborts the tx (IntegerOverflow) — not wrapping.',
+      zh: '整数为 Checked：溢出整笔失败（IntegerOverflow），不会 wrapping。',
+    },
     example: '($0 + $1)',
   }),
   sub: E({
@@ -241,6 +249,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     display: '-',
     signature: 'sub(a: T, b: T) → T',
     summary: { en: 'a − b (same arithmetic type).', zh: 'a − b（同类型）。' },
+    usage: {
+      en: 'Checked on integers: underflow aborts the tx (IntegerUnderflow). Need a floor at 0? Use satSub.',
+      zh: '整数为 Checked：下溢整笔失败（IntegerUnderflow）。要钳到 0 用 satSub。',
+    },
     example: '($2 - $0)',
   }),
   mul: E({
@@ -248,6 +260,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     display: '*',
     signature: 'mul(a: T, b: T) → T',
     summary: { en: 'a × b (same arithmetic type).', zh: 'a × b（同类型）。' },
+    usage: {
+      en: 'Checked on integers: overflow aborts the tx (IntegerOverflow) — not wrapping.',
+      zh: '整数为 Checked：溢出整笔失败（IntegerOverflow），不会 wrapping。',
+    },
     example: '($0 * $1)',
   }),
   div: E({
@@ -255,6 +271,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     display: '/',
     signature: 'div(a: T, b: T) → T',
     summary: { en: 'Truncating division toward zero.', zh: '向零截断除法。' },
+    usage: {
+      en: 'Checked: divide-by-zero (and signed extreme overflow) aborts the tx.',
+      zh: 'Checked：除零（及有符号极值溢出）整笔失败。',
+    },
     example: '($0 / $1)',
   }),
   divFloor: E({
@@ -262,6 +282,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     display: 'divFloor',
     signature: 'divFloor(a: T, b: T) → T',
     summary: { en: '⌊a / b⌋.', zh: '⌊a / b⌋。' },
+    usage: {
+      en: 'Divide-by-zero aborts the tx.',
+      zh: '除零整笔失败。',
+    },
     example: 'divFloor($0, $1)',
   }),
   divCeil: E({
@@ -269,6 +293,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     display: 'divCeil',
     signature: 'divCeil(a: T, b: T) → T',
     summary: { en: '⌈a / b⌉.', zh: '⌈a / b⌉。' },
+    usage: {
+      en: 'Divide-by-zero aborts the tx.',
+      zh: '除零整笔失败。',
+    },
     example: 'divCeil($0, $1)',
   }),
   min: E({
@@ -336,8 +364,8 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
       zh: 'a − b，不低于类型最小值（无符号为 0）。',
     },
     usage: {
-      en: 'Deltas that must not underflow (fee / repay math).',
-      zh: '不允许下溢的差额（手续费 / 还款等）。',
+      en: 'Unlike sub, underflow clamps instead of failing — fee / repay deltas.',
+      zh: '与 sub 不同：下溢钳位而不是失败——手续费 / 还款差额等。',
     },
     example: 'satSub($2, $0)',
   }),
@@ -364,8 +392,8 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
       zh: '⌊amount × bps / 10_000⌋。',
     },
     usage: {
-      en: 'Fee / haircut in basis points, floor rounding.',
-      zh: '按 bps 计费/折扣，向下取整。',
+      en: 'Fee / haircut in bps, floor. Intermediate overflow or /0 aborts the tx.',
+      zh: '按 bps 计费/折扣，向下取整。中间溢出或除零整笔失败。',
     },
     example: 'bpsMulFloor($0, $1)',
   }),
@@ -378,8 +406,8 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
       zh: '⌈amount × bps / 10_000⌉。',
     },
     usage: {
-      en: 'Same as floor, but ceil when the protocol charges up.',
-      zh: '与 floor 相同场景；协议要向上取整时用。',
+      en: 'Same as floor, but ceil. Intermediate overflow or /0 aborts the tx.',
+      zh: '与 floor 相同场景；向上取整。中间溢出或除零整笔失败。',
     },
     example: 'bpsMulCeil($0, $1)',
   }),
@@ -392,8 +420,8 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
       zh: '⌊a × b / c⌋。a、b 为 U64/U128；c 同宽或更窄无符号。',
     },
     usage: {
-      en: 'Pro-rata amounts without a separate widen step when types already fit.',
-      zh: '按比例分配；类型已够宽时不必再手动拓宽。',
+      en: 'Pro-rata when types fit. Intermediate overflow or /0 aborts the tx.',
+      zh: '按比例分配；类型已够宽时不必再拓宽。中间溢出或除零整笔失败。',
     },
     example: 'mulDivFloor($0, $1, $2)',
   }),
@@ -404,6 +432,10 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
     summary: {
       en: '⌈a × b / c⌉.',
       zh: '⌈a × b / c⌉。',
+    },
+    usage: {
+      en: 'Intermediate overflow or /0 aborts the tx.',
+      zh: '中间溢出或除零整笔失败。',
     },
     example: 'mulDivCeil($0, $1, $2)',
   }),
