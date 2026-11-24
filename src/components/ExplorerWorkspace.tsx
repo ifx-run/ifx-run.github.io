@@ -2106,7 +2106,10 @@ function InstructionBody({
 }) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
-  const [flashAccts, setFlashAccts] = useState<number[]>([])
+  /** Absolute account-list indexes currently flashing, with CPI role. */
+  const [flashAccts, setFlashAccts] = useState<
+    { abs: number; role: 'program' | 'key' | 'plain' }[]
+  >([])
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -2123,21 +2126,38 @@ function InstructionBody({
   /**
    * Highlight remaining_accounts slice `[start, start+len)`.
    * Ifx: wire indexes skip frame at keys[0], so abs = remaining + 1.
+   * `role` paints the first slot as CPI program when requested.
    */
   const focusRemainingRange = useCallback(
-    (start: number, len: number) => {
+    (
+      start: number,
+      len: number,
+      opts?: { firstRole?: 'program' | 'key' | 'plain' },
+    ) => {
       if (len <= 0) return
-      const absList: number[] = []
+      const firstRole = opts?.firstRole ?? 'plain'
+      const list: { abs: number; role: 'program' | 'key' | 'plain' }[] = []
       for (let i = 0; i < len; i++) {
         const rem = start + i
         const abs = ix.isIfx ? rem + 1 : rem
-        if (abs >= 0 && abs < ix.accounts.length) absList.push(abs)
+        if (abs < 0 || abs >= ix.accounts.length) continue
+        list.push({
+          abs,
+          role:
+            firstRole === 'program'
+              ? i === 0
+                ? 'program'
+                : 'key'
+              : firstRole === 'key'
+                ? 'key'
+                : 'plain',
+        })
       }
-      if (absList.length === 0) return
+      if (list.length === 0) return
       document
-        .getElementById(`ix-acct-${ix.index}-${absList[0]}`)
+        .getElementById(`ix-acct-${ix.index}-${list[0].abs}`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      setFlashAccts(absList)
+      setFlashAccts(list)
       if (flashTimer.current) clearTimeout(flashTimer.current)
       flashTimer.current = setTimeout(() => setFlashAccts([]), 1200)
     },
@@ -2145,7 +2165,10 @@ function InstructionBody({
   )
 
   const focusRemainingAccount = useCallback(
-    (remainingIndex: number) => focusRemainingRange(remainingIndex, 1),
+    (
+      remainingIndex: number,
+      role: 'program' | 'key' | 'plain' = 'plain',
+    ) => focusRemainingRange(remainingIndex, 1, { firstRole: role }),
     [focusRemainingRange],
   )
 
@@ -2204,16 +2227,28 @@ function InstructionBody({
                 ? t.accountFrame
                 : t.accountRemainingHint
               : t.accountIndex
+            const flash = flashAccts.find((f) => f.abs === i)
             return (
               <li
                 key={`${a.address}-${i}`}
                 id={`ix-acct-${ix.index}-${i}`}
-                className={flashAccts.includes(i) ? 'is-flash' : undefined}
+                className={
+                  flash
+                    ? flash.role === 'program'
+                      ? 'is-flash-program'
+                      : 'is-flash'
+                    : undefined
+                }
               >
                 <span className="acct-idx" title={idxTitle}>
                   {idxLabel}
                 </span>
                 <span className="acct-flags" aria-label={roleAria(a.role, t)}>
+                  {flash?.role === 'program' && (
+                    <span className="flag flag-program">
+                      {t.accountRoleCpiProgram}
+                    </span>
+                  )}
                   <span
                     className={
                       a.role.signer ? 'flag flag-signer' : 'flag flag-off'
@@ -2375,7 +2410,7 @@ function InstructionBody({
 }
 
 /**
- * Turn `$3`, `#5`, and `accts[0..+3]` in L1 lines into clickable links.
+ * Turn `$3`, `#5`, `prog=#0`, `keys[1..+2]`, and legacy `accts[…]` into links.
  */
 function L1LineWithLinks({
   line,
@@ -2394,8 +2429,15 @@ function L1LineWithLinks({
   addressLabelFor: (address: string) => string
   /** When set, the leading `$N ←` binding opens rename instead of jump-to-def. */
   defBindingIndex?: number | null
-  onAcctClick: (index: number) => void
-  onRangeClick: (start: number, len: number) => void
+  onAcctClick: (
+    index: number,
+    role?: 'program' | 'key' | 'plain',
+  ) => void
+  onRangeClick: (
+    start: number,
+    len: number,
+    opts?: { firstRole?: 'program' | 'key' | 'plain' },
+  ) => void
   onValueClick: (bindingIndex: number) => void
   onRenameBinding?: (bindingIndex: number) => void
   onAddressClick: (address: string) => void
@@ -2404,7 +2446,7 @@ function L1LineWithLinks({
   const { t } = useApp()
   const nodes: ReactNode[] = []
   const re =
-    /accts\[(\d+)\.\.\+(\d+)\]|\$(\d+)|#(\d+)|([1-9A-HJ-NP-Za-km-z]{32,44})/g
+    /prog=#(\d+)|keys\[(\d+)\.\.\+(\d+)\]|accts\[(\d+)\.\.\+(\d+)\]|\$(\d+)|#(\d+)|([1-9A-HJ-NP-Za-km-z]{32,44})/g
   let last = 0
   let m: RegExpExecArray | null
   let key = 0
@@ -2412,25 +2454,58 @@ function L1LineWithLinks({
     if (m.index > last) {
       nodes.push(<span key={key++}>{line.slice(last, m.index)}</span>)
     }
-    if (m[1] !== undefined && m[2] !== undefined) {
-      const start = Number(m[1])
-      const len = Number(m[2])
+    if (m[1] !== undefined) {
+      const idx = Number(m[1])
       nodes.push(
         <button
           key={key++}
           type="button"
-          className="acct-ref acct-ref-range"
-          title={`remaining [${start} .. ${start + len})`}
+          className="acct-ref acct-ref-prog"
+          title={`${t.accountRoleCpiProgram} · remaining #${idx}`}
           onClick={(e) => {
             e.stopPropagation()
-            onRangeClick(start, len)
+            onAcctClick(idx, 'program')
           }}
         >
           {m[0]}
         </button>,
       )
-    } else if (m[3] !== undefined) {
-      const idx = Number(m[3])
+    } else if (m[2] !== undefined && m[3] !== undefined) {
+      const start = Number(m[2])
+      const len = Number(m[3])
+      nodes.push(
+        <button
+          key={key++}
+          type="button"
+          className="acct-ref acct-ref-range"
+          title={`CPI keys · remaining [${start} .. ${start + len})`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRangeClick(start, len, { firstRole: 'key' })
+          }}
+        >
+          {m[0]}
+        </button>,
+      )
+    } else if (m[4] !== undefined && m[5] !== undefined) {
+      const start = Number(m[4])
+      const len = Number(m[5])
+      nodes.push(
+        <button
+          key={key++}
+          type="button"
+          className="acct-ref acct-ref-range"
+          title={`remaining [${start} .. ${start + len}) · [0]=program`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRangeClick(start, len, { firstRole: 'program' })
+          }}
+        >
+          {m[0]}
+        </button>,
+      )
+    } else if (m[6] !== undefined) {
+      const idx = Number(m[6])
       const label = labelFor(idx)
       const isDefSite =
         onRenameBinding != null &&
@@ -2453,8 +2528,8 @@ function L1LineWithLinks({
           {label}
         </button>,
       )
-    } else if (m[4] !== undefined) {
-      const idx = Number(m[4])
+    } else if (m[7] !== undefined) {
+      const idx = Number(m[7])
       nodes.push(
         <button
           key={key++}
@@ -2469,7 +2544,7 @@ function L1LineWithLinks({
         </button>,
       )
     } else {
-      const addr = m[5]!
+      const addr = m[8]!
       const label = addressLabelFor(addr)
       nodes.push(
         <span key={key++} className="addr-inline">

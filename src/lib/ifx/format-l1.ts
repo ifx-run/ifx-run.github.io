@@ -122,8 +122,18 @@ export function formatLetBinding(b: DecodedLetBinding, index: number): string {
   }
 }
 
+/**
+ * CPI account window: remaining[start] is always the callee program;
+ * remaining[start+1 .. start+len) are the CPI keys.
+ */
+function formatCpiAccounts(start: number, len: number): string {
+  if (len <= 0) return 'accts[empty]'
+  if (len === 1) return `prog=#${start}`
+  return `prog=#${start} keys[${start + 1}..+${len - 1}]`
+}
+
 function formatCpi(step: DecodedCpi, i: number): string {
-  const acct = `accts[${step.accountsStart}..+${step.accountsLen}]`
+  const acct = formatCpiAccounts(step.accountsStart, step.accountsLen)
   if (step.kind === 'static') {
     return `  [${i}] static ${acct} data=${step.dataLen}B`
   }
