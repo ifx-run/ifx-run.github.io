@@ -83,8 +83,8 @@ import {
 import { listRawCpiPatchMaps } from '../lib/ifx/decode-l1'
 import {
   splitExprGlossaryTokens,
-  type ExprGlossaryEntry,
-} from '../lib/ifx/expr-glossary'
+  type GlossaryEntry,
+} from '../lib/ifx/glossary'
 import {
   aliasKey,
   bindingByteSizeAt,
@@ -1016,7 +1016,7 @@ type RefsModalState = {
 
 type ExprHelpState = {
   token: string
-  entry: ExprGlossaryEntry
+  entry: GlossaryEntry
 }
 
 function InstructionList({
@@ -2147,11 +2147,15 @@ function ExprHelpModal({
   onClose,
 }: {
   token: string
-  entry: ExprGlossaryEntry
+  entry: GlossaryEntry
   onClose: () => void
 }) {
   const { t, lang } = useApp()
-  const blurb = lang === 'zh' ? entry.zh : entry.en
+  const summary = lang === 'zh' ? entry.summary.zh : entry.summary.en
+  const usage =
+    entry.usage && (lang === 'zh' ? entry.usage.zh : entry.usage.en)
+  const kindLabel =
+    entry.kind === 'let' ? t.exprHelpTitleLet : t.exprHelpTitleExpr
   return (
     <div
       className="refs-modal-backdrop"
@@ -2165,30 +2169,39 @@ function ExprHelpModal({
         aria-labelledby="expr-help-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="refs-modal-head">
-          <h3 id="expr-help-title">
-            {t.exprHelpTitle}{' '}
-            <code className="expr-help-token">{token}</code>
-          </h3>
+        <div className="refs-modal-head expr-help-head">
+          <div className="expr-help-head-text">
+            <p className="expr-help-kind">{kindLabel}</p>
+            <h3 id="expr-help-title">
+              <code className="expr-help-token">{token}</code>
+            </h3>
+          </div>
           <button type="button" className="ghost tiny" onClick={onClose}>
             {t.exprHelpClose}
           </button>
         </div>
         <div className="expr-help-body">
-          <p className="expr-help-sig">
-            <code>{entry.signature}</code>
-          </p>
-          <p className="expr-help-result muted">
-            {t.exprHelpResult}: <code>{entry.result}</code>
-            {entry.op !== token ? (
-              <>
-                {' '}
-                · <code>{entry.op}</code>
-              </>
-            ) : null}
-          </p>
-          <p className="expr-help-blurb">{blurb}</p>
-          <p className="expr-help-foot muted">{t.exprHelpFootnote}</p>
+          <section className="expr-help-section">
+            <h4 className="expr-help-label">{t.exprHelpSectionSig}</h4>
+            <pre className="expr-help-code">{entry.signature}</pre>
+          </section>
+          <section className="expr-help-section">
+            <h4 className="expr-help-label">{t.exprHelpSectionSummary}</h4>
+            <p className="expr-help-prose">{summary}</p>
+          </section>
+          {usage ? (
+            <section className="expr-help-section">
+              <h4 className="expr-help-label">{t.exprHelpSectionUsage}</h4>
+              <p className="expr-help-prose">{usage}</p>
+            </section>
+          ) : null}
+          {entry.example ? (
+            <section className="expr-help-section">
+              <h4 className="expr-help-label">{t.exprHelpSectionExample}</h4>
+              <pre className="expr-help-code">{entry.example}</pre>
+            </section>
+          ) : null}
+          <p className="expr-help-foot">{t.exprHelpFootnote}</p>
         </div>
       </div>
     </div>
@@ -2290,7 +2303,7 @@ function InstructionBody({
     opts?: { preferGlobal?: boolean },
   ) => void
   onClearAddress: (address: string) => void
-  onExprClick: (token: string, entry: ExprGlossaryEntry) => void
+  onExprClick: (token: string, entry: GlossaryEntry) => void
 }) {
   const { t } = useApp()
   const [dataEnc, setDataEnc] = useState<DataEncoding>('hex')
@@ -2604,7 +2617,7 @@ function InstructionBody({
 function pushExprLinkedText(
   text: string,
   keyStart: number,
-  onExprClick: (token: string, entry: ExprGlossaryEntry) => void,
+  onExprClick: (token: string, entry: GlossaryEntry) => void,
 ): { nodes: ReactNode[]; nextKey: number } {
   const nodes: ReactNode[] = []
   let key = keyStart
@@ -2666,7 +2679,7 @@ function L1LineWithLinks({
   onRenameBinding?: (bindingIndex: number) => void
   onAddressClick: (address: string) => void
   onAddressRename: (address: string) => void
-  onExprClick: (token: string, entry: ExprGlossaryEntry) => void
+  onExprClick: (token: string, entry: GlossaryEntry) => void
 }) {
   const { t } = useApp()
   const nodes: ReactNode[] = []

@@ -164,11 +164,15 @@ export const copy = {
     annotationExportTitle: 'Download wire + names as JSON',
     annotationImportTitle: 'Open a shared annotation JSON',
     annotationImportError: 'Could not import annotation file.',
-    exprHelpTitle: 'Expression operator',
+    exprHelpTitleExpr: 'Expression',
+    exprHelpTitleLet: 'Let binding',
     exprHelpClose: 'Close',
-    exprHelpResult: 'Result',
+    exprHelpSectionSig: 'Signature',
+    exprHelpSectionSummary: 'What it does',
+    exprHelpSectionUsage: 'When to use',
+    exprHelpSectionExample: 'Example',
     exprHelpFootnote:
-      'Site glossary — periodically aligned with ifx-core Expr. Not a substitute for design docs.',
+      'Short site glossary — synced with ifx-core / typed lets. Full rules live in the docs.',
   },
   zh: {
     brand: 'Ifx',
@@ -311,11 +315,15 @@ export const copy = {
     annotationExportTitle: '下载交易数据与命名为 JSON',
     annotationImportTitle: '打开他人分享的注释 JSON',
     annotationImportError: '无法导入该注释文件。',
-    exprHelpTitle: '表达式算子',
+    exprHelpTitleExpr: '表达式',
+    exprHelpTitleLet: 'Let 绑定',
     exprHelpClose: '关闭',
-    exprHelpResult: '结果类型',
+    exprHelpSectionSig: '签名',
+    exprHelpSectionSummary: '做什么',
+    exprHelpSectionUsage: '何时用',
+    exprHelpSectionExample: '例子',
     exprHelpFootnote:
-      '站内词条，会与 ifx-core Expr 定期对齐；详细设计仍以文档为准。',
+      '站内速查词条，与 ifx-core / typed let 对齐；完整规则见文档。',
   },
 } as const
 
