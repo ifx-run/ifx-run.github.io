@@ -1551,9 +1551,14 @@ a.tx-signature-solscan:hover {
   user-select: none;
   pointer-events: none;
 }
+/* One highlight block per patch: $N only on the head cell; tails extend width. */
 .raw-cpi-cell.is-patched {
   background: color-mix(in srgb, currentColor 18%, var(--bg));
   cursor: pointer;
+  border-right-color: color-mix(in srgb, currentColor 28%, transparent);
+}
+.raw-cpi-cell.is-patched.is-patch-cont {
+  border-left: none;
 }
 .raw-cpi-cell.is-patched .raw-cpi-cell-hex {
   position: absolute;
@@ -1561,7 +1566,10 @@ a.tx-signature-solscan:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.16;
+  opacity: 0.14;
+}
+.raw-cpi-cell.is-patch-head .raw-cpi-cell-hex {
+  opacity: 0.1;
 }
 .raw-cpi-cell-bind {
   position: relative;
