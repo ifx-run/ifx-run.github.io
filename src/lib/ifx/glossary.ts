@@ -965,6 +965,8 @@ const DISPLAY_TOKEN_RE = new RegExp(
     String.raw`\b(?:${NAMED_TOKENS.map(escapeRe).join('|')})\b`,
     String.raw`>=|<=|==|!=|&&|\|\|`,
     String.raw`!(?=\()`,
+    // Binary `-` is always spaced (`a - b`); bare `-$N` is unary neg — skip it.
+    String.raw`(?<=\s)-(?=\s)`,
     String.raw`(?<![$\w])(?:[>+*/](?!=)|<(?!=))`,
   ].join('|'),
   'g',
