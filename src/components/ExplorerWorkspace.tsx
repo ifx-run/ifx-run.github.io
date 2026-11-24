@@ -46,11 +46,15 @@ import {
   setStoredAlias,
 } from '../lib/solana/alias-storage'
 import {
+  buildGlobalAddressBookPackage,
   clearGlobalAddressAlias,
   getGlobalAddressAlias,
+  globalAddressBookDownloadName,
+  globalAddressBookPackageToJson,
   hasGlobalAddressAlias,
   listGlobalAddressAliases,
   MAX_GLOBAL_ADDRESS_ALIASES,
+  parseGlobalAddressBookPackage,
   replaceGlobalAddressAliases,
   setGlobalAddressAlias,
 } from '../lib/solana/global-alias-storage'
@@ -517,50 +521,58 @@ export function ExplorerWorkspace() {
                 if (file) void onImportAnnotationFile(file)
               }}
             />
-            <button
-              type="button"
-              className="ghost tiny"
-              title={t.globalAliasManagerTitle}
-              onClick={() => setGlobalAliasOpen(true)}
-            >
-              {t.globalAliasManager}
-            </button>
-            <button
-              type="button"
-              className="ghost tiny"
-              title={t.annotationImportTitle}
-              onClick={() => importFileRef.current?.click()}
-            >
-              {t.annotationImport}
-            </button>
-            {result && (
+            <div className="ingress-action-group">
               <button
                 type="button"
                 className="ghost tiny"
-                title={t.annotationExportTitle}
-                onClick={onExportAnnotation}
+                title={t.globalAliasManagerTitle}
+                onClick={() => setGlobalAliasOpen(true)}
               >
-                {t.annotationExport}
+                {t.globalAliasManager}
               </button>
-            )}
-            {canCollapseIngress && (
+            </div>
+            <span className="ingress-action-sep" aria-hidden="true" />
+            <div className="ingress-action-group">
               <button
                 type="button"
                 className="ghost tiny"
-                onClick={() => setIngressExpanded((v) => !v)}
+                title={t.annotationImportTitle}
+                onClick={() => importFileRef.current?.click()}
               >
-                {ingressExpanded ? t.collapseIngress : t.expandIngress}
+                {t.annotationImport}
               </button>
-            )}
-            <button
-              type="button"
-              className="ghost tiny"
-              title={t.clearTitle}
-              disabled={!hasInput && !result && !error}
-              onClick={onClear}
-            >
-              {t.clear}
-            </button>
+              {result && (
+                <button
+                  type="button"
+                  className="ghost tiny"
+                  title={t.annotationExportTitle}
+                  onClick={onExportAnnotation}
+                >
+                  {t.annotationExport}
+                </button>
+              )}
+            </div>
+            <span className="ingress-action-sep" aria-hidden="true" />
+            <div className="ingress-action-group">
+              {canCollapseIngress && (
+                <button
+                  type="button"
+                  className="ghost tiny"
+                  onClick={() => setIngressExpanded((v) => !v)}
+                >
+                  {ingressExpanded ? t.collapseIngress : t.expandIngress}
+                </button>
+              )}
+              <button
+                type="button"
+                className="ghost tiny"
+                title={t.clearTitle}
+                disabled={!hasInput && !result && !error}
+                onClick={onClear}
+              >
+                {t.clear}
+              </button>
+            </div>
           </div>
         </div>
         {displaySignature ? (
@@ -1542,6 +1554,8 @@ function GlobalAliasManagerModal({
   onSaved: () => void
 }) {
   const { t } = useApp()
+  const importRef = useRef<HTMLInputElement>(null)
+  const [importError, setImportError] = useState<string | null>(null)
   const [rows, setRows] = useState<GlobalAliasDraftRow[]>(() =>
     listGlobalAddressAliases().map((e) => ({
       id: `${e.address}:${e.createdAt}`,
@@ -1582,6 +1596,64 @@ function GlobalAliasManagerModal({
 
   function removeRow(id: string) {
     setRows((prev) => prev.filter((r) => r.id !== id))
+  }
+
+  function onExport() {
+    const pkg = buildGlobalAddressBookPackage(
+      rows.map((r) => ({ address: r.address, name: r.name })),
+    )
+    const blob = new Blob([globalAddressBookPackageToJson(pkg)], {
+      type: 'application/json',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = globalAddressBookDownloadName()
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function onImportFile(file: File) {
+    setImportError(null)
+    try {
+      const text = await file.text()
+      const pkg = parseGlobalAddressBookPackage(JSON.parse(text))
+      const now = Date.now()
+      setRows((prev) => {
+        const byAddr = new Map(
+          prev
+            .filter((r) => r.address.trim())
+            .map((r) => [r.address.trim(), r] as const),
+        )
+        for (const e of pkg.entries) {
+          const existing = byAddr.get(e.address)
+          if (existing) {
+            byAddr.set(e.address, { ...existing, name: e.name })
+          } else {
+            byAddr.set(e.address, {
+              id: `import:${e.address}:${now}`,
+              address: e.address,
+              name: e.name,
+              createdAt: now,
+            })
+          }
+        }
+        // Keep blank draft rows, then merged filled rows (imports first).
+        const blanks = prev.filter((r) => !r.address.trim() && !r.name.trim())
+        const importedOrder = pkg.entries
+          .map((e) => byAddr.get(e.address)!)
+          .filter(Boolean)
+        const rest = [...byAddr.values()].filter(
+          (r) => !pkg.entries.some((e) => e.address === r.address.trim()),
+        )
+        return [...blanks, ...importedOrder, ...rest].slice(
+          0,
+          MAX_GLOBAL_ADDRESS_ALIASES,
+        )
+      })
+    } catch {
+      setImportError(t.globalAliasImportError)
+    }
   }
 
   function save() {
@@ -1625,6 +1697,11 @@ function GlobalAliasManagerModal({
               MAX_GLOBAL_ADDRESS_ALIASES,
             )}
           </p>
+          {importError && (
+            <p className="global-alias-hint" role="alert">
+              {importError}
+            </p>
+          )}
           <div className="global-alias-table-wrap">
             {rows.length === 0 ? (
               <p className="global-alias-empty muted">{t.globalAliasEmpty}</p>
@@ -1685,9 +1762,38 @@ function GlobalAliasManagerModal({
             )}
           </div>
           <div className="global-alias-modal-actions">
-            <button type="button" className="ghost" onClick={addRow}>
-              {t.globalAliasAdd}
-            </button>
+            <div className="global-alias-modal-actions-start">
+              <input
+                ref={importRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (file) void onImportFile(file)
+                }}
+              />
+              <button type="button" className="ghost" onClick={addRow}>
+                {t.globalAliasAdd}
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                title={t.globalAliasImportTitle}
+                onClick={() => importRef.current?.click()}
+              >
+                {t.globalAliasImport}
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                title={t.globalAliasExportTitle}
+                onClick={onExport}
+              >
+                {t.globalAliasExport}
+              </button>
+            </div>
             <div className="global-alias-modal-actions-end">
               <button type="button" className="ghost" onClick={onClose}>
                 {t.frameRenameCancel}
