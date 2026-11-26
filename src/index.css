@@ -1443,7 +1443,13 @@ a.tx-signature-solscan:hover {
   color: var(--muted);
 }
 .rpc-settings-field .rpc-input {
+  /* .rpc-input’s flex: 1 1 220px is for the horizontal ALT/sig row;
+     in this column it became a ~220px-tall “textarea look”. */
   width: 100%;
+  flex: 0 0 auto;
+  height: 2.45rem;
+  box-sizing: border-box;
+  line-height: 1.35;
 }
 .rpc-settings-actions {
   display: flex;
