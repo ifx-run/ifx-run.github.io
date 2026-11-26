@@ -31,7 +31,11 @@ import {
   shortenAddress,
   type DataEncoding,
 } from '../lib/solana/bytes'
-import { getStoredRpcUrl, setStoredRpcUrl } from '../lib/solana/rpc'
+import {
+  DEFAULT_RPC_URL,
+  getStoredRpcUrl,
+  setStoredRpcUrl,
+} from '../lib/solana/rpc'
 import {
   clearStoredWire,
   getStoredWire,
@@ -125,6 +129,7 @@ export function ExplorerWorkspace() {
   /** Bumps when aliases change without a wire-key change (e.g. import). */
   const [aliasEpoch, setAliasEpoch] = useState(0)
   const [globalAliasOpen, setGlobalAliasOpen] = useState(false)
+  const [rpcSettingsOpen, setRpcSettingsOpen] = useState(false)
 
   /**
    * Keep `/explorer/:ingress` aligned with the active tx.
@@ -529,6 +534,14 @@ export function ExplorerWorkspace() {
               <button
                 type="button"
                 className="ghost tiny"
+                title={t.rpcSettingsTitle}
+                onClick={() => setRpcSettingsOpen(true)}
+              >
+                {t.rpcSettings}
+              </button>
+              <button
+                type="button"
+                className="ghost tiny"
                 title={t.globalAliasManagerTitle}
                 onClick={() => setGlobalAliasOpen(true)}
               >
@@ -640,6 +653,17 @@ export function ExplorerWorkspace() {
           </>
         )}
       </form>
+
+      {rpcSettingsOpen && (
+        <RpcSettingsModal
+          value={rpcDraft}
+          onSave={(url) => {
+            setRpcDraft(url)
+            setStoredRpcUrl(url)
+          }}
+          onClose={() => setRpcSettingsOpen(false)}
+        />
+      )}
 
       {globalAliasOpen && (
         <GlobalAliasManagerModal
@@ -1554,6 +1578,106 @@ function ConfirmModal({
             >
               {confirmLabel}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RpcSettingsModal({
+  value,
+  onSave,
+  onClose,
+}: {
+  value: string
+  onSave: (url: string) => void
+  onClose: () => void
+}) {
+  const { t } = useApp()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const inputId = useId()
+  const [draft, setDraft] = useState(value)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  function commit(nextRaw: string) {
+    const next = nextRaw.trim() || DEFAULT_RPC_URL
+    onSave(next)
+    onClose()
+  }
+
+  return (
+    <div
+      className="refs-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="refs-modal rpc-settings-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rpc-settings-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="refs-modal-head">
+          <h3 id="rpc-settings-modal-title">{t.rpcSettingsTitle}</h3>
+          <button type="button" className="ghost tiny" onClick={onClose}>
+            {t.frameRenameCancel}
+          </button>
+        </div>
+        <div className="rpc-settings-modal-body">
+          <p className="rpc-settings-why muted">{t.rpcSettingsWhy}</p>
+          <div className="rpc-settings-field">
+            <label htmlFor={inputId}>{t.rpcLabel}</label>
+            <input
+              ref={inputRef}
+              id={inputId}
+              className="rpc-input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  commit(draft)
+                }
+              }}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder="https://…"
+            />
+          </div>
+          <div className="rpc-settings-actions">
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => setDraft(DEFAULT_RPC_URL)}
+            >
+              {t.rpcSettingsReset}
+            </button>
+            <div className="rpc-settings-actions-end">
+              <button type="button" className="ghost" onClick={onClose}>
+                {t.frameRenameCancel}
+              </button>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => commit(draft)}
+              >
+                {t.rpcSettingsSave}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -140,6 +140,12 @@ export const copy = {
       'Also apply to the global address book (other transactions)',
     addressAliasGlobalClearHint:
       'Clear will also remove the global entry',
+    rpcSettings: 'RPC',
+    rpcSettingsTitle: 'RPC settings',
+    rpcSettingsSave: 'Save',
+    rpcSettingsReset: 'Use default',
+    rpcSettingsWhy:
+      'We never submit your transaction to the network. RPC is only used to (1) fetch Address Lookup Tables and (2) download wire bytes for an already-landed signature/hash. If we add simulation later, it may use this endpoint too.',
     globalAliasManager: 'Address book',
     globalAliasManagerTitle: 'Global address book',
     globalAliasManagerHint: (n: number, max: number) =>
@@ -291,6 +297,12 @@ export const copy = {
     addressRenamePrompt: '为该地址命名（留空则显示原地址）',
     addressAliasGlobal: '同时应用到全局地址簿（其他交易也可用）',
     addressAliasGlobalClearHint: '清除时也会删掉全局条目',
+    rpcSettings: 'RPC',
+    rpcSettingsTitle: 'RPC 设置',
+    rpcSettingsSave: '保存',
+    rpcSettingsReset: '恢复默认',
+    rpcSettingsWhy:
+      '交易不会被发到网络上。我们只会用 RPC 做两件事：（1）拉取 Address Lookup Table；（2）按链上已有的签名/hash 下载交易序列化数据。将来若加入模拟执行，可能会有进一步用途。',
     globalAliasManager: '地址簿',
     globalAliasManagerTitle: '全局地址簿',
     globalAliasManagerHint: (n: number, max: number) =>
