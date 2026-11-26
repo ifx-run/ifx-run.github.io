@@ -1419,7 +1419,7 @@ a.tx-signature-solscan:hover {
 }
 
 .rpc-settings-modal {
-  width: min(32rem, 100%);
+  width: min(40rem, 100%);
   max-height: none;
 }
 .rpc-settings-modal-body {
