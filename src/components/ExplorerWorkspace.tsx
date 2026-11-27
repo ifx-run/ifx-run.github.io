@@ -1019,7 +1019,12 @@ function resolveBindingDef(
       defs.clear()
       continue
     }
-    if (kind !== 'let' || !ix.l1) continue
+    if (
+      (kind !== 'let' && kind !== 'let_patched_cpi') ||
+      !ix.l1
+    ) {
+      continue
+    }
     for (let lineIndex = 0; lineIndex < ix.l1.lines.length; lineIndex++) {
       const m = /^\$(\d+)\s*←/.exec(ix.l1.lines[lineIndex]!)
       if (!m) continue

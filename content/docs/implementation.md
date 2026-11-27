@@ -20,6 +20,7 @@ Describes the **Anchor program currently in this repo** (`programs/ifx`). Transa
 | `ifx_assert_multi` | Evaluate `U8LenVec<Expr>` in order; short-circuit on first false |
 | `ifx_patched_cpi` | CPI; patch template `data` from Frame tape (`Cpi` + `RawCpiPatch`; requires non-empty patches) |
 | `ifx_if_else` | Conditional branch: `Skip` / `Revert` / CPI sequence per arm | Evaluates `cond`; runs `then_arm` or `else_arm` (`IfElseArm`) |
+| `ifx_let_patched_cpi` | One CPI, then append fixed-width slices of **that** call's return data (`{ ty, offset }`, 1–255). Top-level write only |
 
 - `ifx_let`, `ifx_reset_frame`, `ifx_close_frame`, and `ifx_create_frame` must run at **transaction top level** (`stack height == 1`) — [frame-authority.md](./frame-authority.md).
 - CPI in `ifx_let` / `ifx_patched_cpi` / `ifx_if_else` uses **`remaining_accounts`** indices.

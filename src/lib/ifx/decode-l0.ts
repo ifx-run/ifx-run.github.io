@@ -15,6 +15,7 @@ export const IFX_IX_NAMES = [
   'ifx_assert_multi',
   'ifx_patched_cpi',
   'ifx_if_else',
+  'ifx_let_patched_cpi',
 ] as const
 
 export type IfxIxName = (typeof IFX_IX_NAMES)[number]
@@ -29,6 +30,7 @@ export const IFX_IX_SHORT: Record<IfxIxName, string> = {
   ifx_assert_multi: 'assert_multi',
   ifx_patched_cpi: 'patched_cpi',
   ifx_if_else: 'if_else',
+  ifx_let_patched_cpi: 'let_patched_cpi',
 }
 
 export const IX_DISC_CREATE_FRAME = 0
@@ -39,6 +41,7 @@ export const IX_DISC_ASSERT = 4
 export const IX_DISC_ASSERT_MULTI = 5
 export const IX_DISC_PATCHED_CPI = 6
 export const IX_DISC_IF_ELSE = 7
+export const IX_DISC_LET_PATCHED_CPI = 8
 
 const DISC_TO_NAME: ReadonlyMap<number, IfxIxName> = new Map([
   [IX_DISC_CREATE_FRAME, 'ifx_create_frame'],
@@ -49,6 +52,7 @@ const DISC_TO_NAME: ReadonlyMap<number, IfxIxName> = new Map([
   [IX_DISC_ASSERT_MULTI, 'ifx_assert_multi'],
   [IX_DISC_PATCHED_CPI, 'ifx_patched_cpi'],
   [IX_DISC_IF_ELSE, 'ifx_if_else'],
+  [IX_DISC_LET_PATCHED_CPI, 'ifx_let_patched_cpi'],
 ])
 
 export type DecodedIfxInstruction = {
@@ -101,5 +105,7 @@ export function docsSlugForIfxIx(name: IfxIxName): string {
       return 'raw-cpi-patches'
     case 'ifx_if_else':
       return 'structured-cpi-patches'
+    case 'ifx_let_patched_cpi':
+      return 'design'
   }
 }

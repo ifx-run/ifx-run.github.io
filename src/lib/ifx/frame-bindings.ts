@@ -23,6 +23,7 @@ type IxSlice = {
     args: {
       kind: string
       bindings?: DecodedLetBinding[]
+      lets?: { ty: string; offset: number }[]
     }
   }
 }
@@ -64,25 +65,47 @@ export function collectFrameViews(
       s.env = new Map()
       continue
     }
-    if (kind !== 'let') continue
-
-    const bindings = ix.l1.args.bindings
-    if (!bindings) continue
     const s = sessionFor(frame)
     const base = ix.l1.bindingBase ?? s.vars.length
-    for (let i = 0; i < bindings.length; i++) {
-      const b = bindings[i]!
-      const index = base + i
-      const ty = inferLetBindingTy(b, s.env)
-      s.env.set(index, ty)
-      const slot: FrameVar = {
-        index,
-        ty,
-        kind: b.kind,
-        defIx: ix.index,
+
+    if (kind === 'let') {
+      const bindings = ix.l1.args.bindings
+      if (!bindings) continue
+      for (let i = 0; i < bindings.length; i++) {
+        const b = bindings[i]!
+        const index = base + i
+        const ty = inferLetBindingTy(b, s.env)
+        s.env.set(index, ty)
+        const slot: FrameVar = {
+          index,
+          ty,
+          kind: b.kind,
+          defIx: ix.index,
+        }
+        if (index < s.vars.length) s.vars[index] = slot
+        else s.vars.push(slot)
       }
-      if (index < s.vars.length) s.vars[index] = slot
-      else s.vars.push(slot)
+      continue
+    }
+
+    if (kind === 'let_patched_cpi') {
+      const lets = (
+        ix.l1.args as { lets?: { ty: string; offset: number }[] }
+      ).lets
+      if (!lets) continue
+      for (let i = 0; i < lets.length; i++) {
+        const b = lets[i]!
+        const index = base + i
+        s.env.set(index, b.ty)
+        const slot: FrameVar = {
+          index,
+          ty: b.ty,
+          kind: 'returnData',
+          defIx: ix.index,
+        }
+        if (index < s.vars.length) s.vars[index] = slot
+        else s.vars.push(slot)
+      }
     }
   }
 
@@ -105,6 +128,7 @@ type TyCursorIx = {
     args: {
       kind: string
       bindings?: DecodedLetBinding[]
+      lets?: { ty: string; offset: number }[]
     }
   }
 }
@@ -126,15 +150,24 @@ export function bindingByteSizeAt(
       env.clear()
       continue
     }
-    if (kind !== 'let') continue
-    const bindings = ix.l1?.args.bindings
-    if (!bindings) continue
     const base = ix.l1?.bindingBase ?? 0
-    for (let i = 0; i < bindings.length; i++) {
-      const b = bindings[i]!
-      const index = base + i
-      const ty = inferLetBindingTy(b, env)
-      env.set(index, ty)
+    if (kind === 'let') {
+      const bindings = ix.l1?.args.bindings
+      if (!bindings) continue
+      for (let i = 0; i < bindings.length; i++) {
+        const b = bindings[i]!
+        const index = base + i
+        const ty = inferLetBindingTy(b, env)
+        env.set(index, ty)
+      }
+      continue
+    }
+    if (kind === 'let_patched_cpi') {
+      const lets = ix.l1?.args.lets
+      if (!lets) continue
+      for (let i = 0; i < lets.length; i++) {
+        env.set(base + i, lets[i]!.ty)
+      }
     }
   }
   return valueTypeByteSize(env.get(bindingIndex) ?? 'u64')

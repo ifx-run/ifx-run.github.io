@@ -1,7 +1,7 @@
 import type { DecodedExpr } from './decode-expr'
 import type { DecodedLetBinding } from './decode-let'
 import type { DecodedCpi, DecodedIfElseArm } from './decode-cpi'
-import type { IfxL1Decoded } from './decode-l1'
+import type { DecodedReturnDataLet, IfxL1Decoded } from './decode-l1'
 
 const BIN_SYM: Record<string, string> = {
   add: '+',
@@ -193,6 +193,13 @@ export function formatL1Lines(
       return decoded.conds.map((c, i) => `[${i}] assert ${formatExpr(c)}`)
     case 'patched_cpi':
       return [formatCpi(decoded.cpi, 0).replace(/^ {2}/, '')]
+    case 'let_patched_cpi':
+      return [
+        formatCpi(decoded.cpi, 0).replace(/^ {2}/, ''),
+        ...decoded.lets.map((b, i) =>
+          formatReturnDataLet(b, bindingBase + i),
+        ),
+      ]
     case 'if_else':
       return [
         `if ${formatExpr(decoded.cond)}`,
@@ -200,6 +207,10 @@ export function formatL1Lines(
         ...formatArm(decoded.elseArm, 'else'),
       ]
   }
+}
+
+function formatReturnDataLet(b: DecodedReturnDataLet, index: number): string {
+  return `$${index} ← return_data[+${b.offset}] · ${b.ty}`
 }
 
 export function formatL1Summary(
@@ -211,6 +222,9 @@ export function formatL1Summary(
   if (lines.length === 1) return lines[0]!
   if (decoded.kind === 'let') {
     return `let ${decoded.bindings.length} binding(s): ${lines[0]}${lines.length > 1 ? '…' : ''}`
+  }
+  if (decoded.kind === 'let_patched_cpi') {
+    return `let_patched_cpi · ${decoded.lets.length} return-data let(s)`
   }
   if (decoded.kind === 'if_else') {
     return `if ${formatExpr(decoded.cond)} → then ${decoded.thenArm.kind} / else ${decoded.elseArm.kind}`

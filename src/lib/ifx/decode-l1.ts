@@ -1,5 +1,10 @@
 import { WireCursor } from './cursor'
-import { decodeExpr, encodePubkeyBase58, type DecodedExpr } from './decode-expr'
+import {
+  decodeExpr,
+  decodeValueType,
+  encodePubkeyBase58,
+  type DecodedExpr,
+} from './decode-expr'
 import { decodeLetArgs, type DecodedLetBinding } from './decode-let'
 import {
   decodeCpi,
@@ -13,6 +18,12 @@ import {
   type IfxIxName,
 } from './decode-l0'
 import { formatL1Lines, formatL1Summary } from './format-l1'
+import type { ValueTypeName } from './variants'
+
+export type DecodedReturnDataLet = {
+  ty: ValueTypeName
+  offset: number
+}
 
 export type IfxL1Decoded =
   | {
@@ -27,6 +38,11 @@ export type IfxL1Decoded =
   | { kind: 'assert'; cond: DecodedExpr }
   | { kind: 'assert_multi'; conds: DecodedExpr[] }
   | { kind: 'patched_cpi'; cpi: DecodedCpi }
+  | {
+      kind: 'let_patched_cpi'
+      cpi: DecodedCpi
+      lets: DecodedReturnDataLet[]
+    }
   | {
       kind: 'if_else'
       cond: DecodedExpr
@@ -43,8 +59,9 @@ export type IfxL1View = {
   /** Frame binding index assigned to the first `let` binding in this ix. */
   bindingBase?: number
   /**
-   * True when this `let` appears before any `create_frame` / `reset_frame`
-   * in the same transaction — explorer assumes `$0` but flags the risk.
+   * True when this tape-append ix (`let` / `let_patched_cpi`) appears before
+   * any `create_frame` / `reset_frame` in the same transaction — explorer
+   * assumes `$0` but flags the risk.
    */
   missingFrameReset?: boolean
 }
@@ -70,7 +87,7 @@ export function listRawCpiPatchMaps(args: IfxL1Decoded): RawCpiPatchMapView[] {
       patches: cpi.patches,
     })
   }
-  if (args.kind === 'patched_cpi') {
+  if (args.kind === 'patched_cpi' || args.kind === 'let_patched_cpi') {
     push(args.cpi)
     return out
   }
@@ -127,6 +144,18 @@ function decodeArgsFor(
     }
     case 'ifx_patched_cpi':
       return { kind: 'patched_cpi', cpi: decodeCpi(c) }
+    case 'ifx_let_patched_cpi': {
+      const cpi = decodeCpi(c)
+      const n = c.u8()
+      if (n < 1) {
+        throw new Error('ifx_let_patched_cpi requires at least one return-data let')
+      }
+      const lets: DecodedReturnDataLet[] = []
+      for (let i = 0; i < n; i++) {
+        lets.push({ ty: decodeValueType(c), offset: c.u16() })
+      }
+      return { kind: 'let_patched_cpi', cpi, lets }
+    }
     case 'ifx_if_else': {
       const { cond, thenArm, elseArm } = decodeIfElseArgs(c)
       return { kind: 'if_else', cond, thenArm, elseArm }

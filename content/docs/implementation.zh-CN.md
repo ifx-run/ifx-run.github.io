@@ -20,6 +20,7 @@
 | `ifx_assert_multi` | 顺序求值 `U8LenVec<Expr>`；首条 false 短路 revert |
 | `ifx_patched_cpi` | CPI；从 Frame tape patch 模板 `data`（`Cpi` + `RawCpiPatch`；`patches` 必须非空） |
 | `ifx_if_else` | 条件分支：每 arm 为 `Skip` / `Revert` / CPI 序列 | 对 `cond` 求值；执行 `then_arm` 或 `else_arm`（`IfElseArm`） |
+| `ifx_let_patched_cpi` | 一次 CPI，再把**该次**调用的 return data 按定宽切片 append（`{ ty, offset }`，1–255）。仅顶层写 |
 
 - `ifx_let`、`ifx_reset_frame`、`ifx_close_frame`、`ifx_create_frame` 均须在 **transaction 顶层**（`stack height == 1`）— [frame-authority.zh-CN.md](./frame-authority.zh-CN.md)。
 - `ifx_let` / `ifx_patched_cpi` / `ifx_if_else` 的 CPI 使用 **`remaining_accounts`** 下标。

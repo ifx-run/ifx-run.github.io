@@ -465,6 +465,20 @@ export const GLOSSARY_BY_ID: Record<string, GlossaryEntry> = {
   }),
 
   // ── Let bindings (generic) ────────────────────────────
+  returnData: L({
+    id: 'returnData',
+    display: 'return_data',
+    signature: 'return_data[+offset] · ty  (via ifx_let_patched_cpi)',
+    summary: {
+      en: 'Fixed-width slice of the CPI return data from this same ifx_let_patched_cpi instruction.',
+      zh: '同一次 ifx_let_patched_cpi 里，刚完成的那次 CPI 的 return data 定宽切片。',
+    },
+    usage: {
+      en: 'Capture callee return blobs onto the Frame tape in one top-level ix — not visible to a later plain ifx_let.',
+      zh: '在同一条顶层指令里把被调方 return data 写入 tape；后续单独的 ifx_let 看不到别的指令的 return data。',
+    },
+    example: '$0 ← return_data[+0] · u64',
+  }),
   accountLamports: L({
     id: 'accountLamports',
     display: 'accountLamports',
@@ -997,9 +1011,9 @@ const DISPLAY_TOKEN_RE = new RegExp(
     String.raw`\b(?:${NAMED_TOKENS.map(escapeRe).join('|')})\b`,
     String.raw`>=|<=|==|!=|&&|\|\|`,
     String.raw`!(?=\()`,
-    // Binary `-` is always spaced (`a - b`); bare `-$N` is unary neg — skip it.
-    String.raw`(?<=\s)-(?=\s)`,
-    String.raw`(?<![$\w])(?:[>+*/](?!=)|<(?!=))`,
+    // Binary arithmetic / compare ops are always spaced in L1 (`a + b`).
+    // Do not match `+` inside `return_data[+8]` or similar offsets.
+    String.raw`(?<=\s)(?:[+\-*/]|>(?!=)|<(?!=))(?=\s)`,
   ].join('|'),
   'g',
 )

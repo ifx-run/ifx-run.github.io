@@ -197,12 +197,18 @@ function applyFrameBindingCursor(
     cursor.sawFrameStart = true
     return l1
   }
-  if (l1.args.kind !== 'let') return l1
+  const appendCount =
+    l1.args.kind === 'let'
+      ? l1.args.bindings.length
+      : l1.args.kind === 'let_patched_cpi'
+        ? l1.args.lets.length
+        : 0
+  if (appendCount === 0) return l1
 
   const missingFrameReset = !cursor.sawFrameStart
   const bindingBase = cursor.nextIndex
   const opts = { bindingBase }
-  cursor.nextIndex += l1.args.bindings.length
+  cursor.nextIndex += appendCount
 
   return {
     ...l1,
